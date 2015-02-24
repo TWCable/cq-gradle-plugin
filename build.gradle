@@ -1,0 +1,214 @@
+plugins {
+    id 'groovy'
+    id 'idea'
+    id 'eclipse'
+    id "com.jfrog.bintray" version "1.1"
+}
+
+repositories {
+    jcenter()
+}
+
+version = new Version(version as String)
+
+def scr_version = '1.3.0'
+def httpcomponents_version = '4.1.2'
+
+//noinspection GroovyAssignabilityCheck
+dependencies {
+    // hack to get the complete set of plugins, as well as "most" of the source
+    compile gradleApi() // hack to get the plugins
+    testCompile "org.codehaus.groovy:groovy-all:2.3.6"
+    testCompile "org.gradle:gradle-core:2.2"
+
+    compile "org.apache.httpcomponents:httpclient:${httpcomponents_version}"
+    compile "org.apache.httpcomponents:httpmime:${httpcomponents_version}"
+
+    compile "org.apache.felix:org.apache.felix.scr.generator:${scr_version}"
+    compile "org.apache.felix:org.apache.felix.scr.ant:${scr_version}"
+    compile "biz.aQute:bndlib:1.50.0"
+
+    // @Nonnull @Nullable etc annotations
+    compile "com.google.code.findbugs:jsr305:2.0.0"
+
+    testCompile "org.spockframework:spock-core:0.7-groovy-2.0", {
+        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        exclude group: 'org.hamcrest', module: 'hamcrest-core'
+        exclude group: 'org.junit', module: 'junit-dep'
+    }
+
+    testCompile "cglib:cglib-nodep:2.2"
+}
+
+sourceCompatibility = '1.7'
+targetCompatibility = '1.7'
+
+archivesBaseName = 'cq-gradle-plugins'
+
+// **************************************************************************
+//
+// BINTRAY SUPPORT
+//
+// **************************************************************************
+
+gradle.taskGraph.whenReady { taskGraph ->
+    if (taskGraph.hasTask(bintrayUpload)) {
+        if (!project.hasProperty('bintray.user') || !project.hasProperty('bintray.key')) {
+            throw new IllegalArgumentException((String)"Please define 'bintray.user' and " +
+                "'bintray.key' properties. (Such as in ~/.gradle/gradle.properties)")
+        }
+    }
+}
+
+bintray {
+    user = project.properties['bintray.user']
+    key = project.properties['bintray.key']
+    configurations = ['archives']
+
+    publish = version.status == 'release'
+
+    pkg {
+        userOrg = 'twcable'
+        repo = 'aem'
+        name = project.name
+
+        desc = 'A number of plugins for making it easier to work with Gradle and Adobe CQ/AEM'
+
+        websiteUrl = 'https://github.com/TWCable/cq-gradle-plugin'
+        issueTrackerUrl = 'https://github.com/TWCable/cq-gradle-plugin/issues'
+        vcsUrl = 'https://github.com/TWCable/cq-gradle-plugin.git'
+        licenses = ['Apache-2.0']
+        labels = ['gradle', 'groovy', 'http']
+        attributes = ['plat': ['gradle', 'aem', 'cq']]
+
+        publicDownloadNumbers = true
+
+        //noinspection GroovyAssignabilityCheck
+        version {
+            desc = 'First public release'
+        }
+    }
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives sourcesJar
+}
+
+// **************************************************************************
+//
+// VERSION CLASS
+//
+// **************************************************************************
+
+class Version {
+    String originalVersion
+    String thisVersion
+    String status
+    Date buildTime
+
+
+    Version(String versionValue) {
+        buildTime = new Date()
+        originalVersion = versionValue
+        if (originalVersion.endsWith('-SNAPSHOT')) {
+            status = 'integration'
+            thisVersion = originalVersion.substring(0, originalVersion.length() - 'SNAPSHOT'.length()) + getTimestamp()
+        }
+        else {
+            status = 'release'
+            thisVersion = versionValue
+        }
+    }
+
+
+    @SuppressWarnings("UnnecessaryQualifiedReference")
+    String getTimestamp() {
+        // Convert local file timestamp to UTC
+        def format = new java.text.SimpleDateFormat('yyyyMMddHHmmss')
+        format.setCalendar(Calendar.getInstance(TimeZone.getTimeZone('UTC')));
+        return format.format(buildTime)
+    }
+
+
+    String toString() {
+        thisVersion
+    }
+}
+
+//*************************************************************************
+//
+// IntelliJ IDEA configuration
+//
+//*************************************************************************
+
+idea.project {
+    vcs = 'Git'
+
+    ipr {
+        withXml { provider ->
+            def codeStyleNode = provider.node.component.find { it.@name == 'ProjectCodeStyleSettingsManager' }
+            if (codeStyleNode == null) {
+                codeStyleNode = provider.node.appendNode('component', [name: 'ProjectCodeStyleSettingsManager'])
+            }
+            codeStyleNode.replaceNode { node ->
+                component(name: 'ProjectCodeStyleSettingsManager') {
+                    option(name: "PER_PROJECT_SETTINGS") {
+                        value {
+                            option(name: "OTHER_INDENT_OPTIONS") {
+                                value {
+                                    option(name: "INDENT_SIZE", value: "4")
+                                    option(name: "CONTINUATION_INDENT_SIZE", value: "4")
+                                    option(name: "TAB_SIZE", value: "4")
+                                    option(name: "USE_TAB_CHARACTER", value: "false")
+                                    option(name: "SMART_TABS", value: "false")
+                                    option(name: "LABEL_INDENT_SIZE", value: "0")
+                                    option(name: "LABEL_INDENT_ABSOLUTE", value: "false")
+                                    option(name: "USE_RELATIVE_INDENTS", value: "false")
+                                }
+                            }
+                            option(name: "CLASS_COUNT_TO_USE_IMPORT_ON_DEMAND", value: "9999")
+                            option(name: "NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND", value: "9999")
+                            XML {
+                                option(name: "XML_LEGACY_SETTINGS_IMPORTED", value: "true")
+                            }
+
+                            // this is needed in addition to the one below, for import settings
+                            GroovyCodeStyleSettings {
+                                option(name: "CLASS_COUNT_TO_USE_IMPORT_ON_DEMAND", value: "9999")
+                                option(name: "NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND", value: "9999")
+                            }
+
+                            // oddly, both "JAVA" and "Java" are used...
+                            ['Groovy', 'JAVA', 'Java', 'Scala'].each {
+                                codeStyleSettings(language: it) {
+                                    option(name: "CLASS_COUNT_TO_USE_IMPORT_ON_DEMAND", value: "9999")
+                                    option(name: "NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND", value: "9999")
+                                    option(name: "BLANK_LINES_AROUND_METHOD", value: "2")
+                                    //option(name: "BLANK_LINES_BEFORE_METHOD_BODY", value: "1")
+                                    option(name: "ELSE_ON_NEW_LINE", value: "true")
+                                    option(name: "CATCH_ON_NEW_LINE", value: "true")
+                                    option(name: "FINALLY_ON_NEW_LINE", value: "true")
+                                    option(name: "SPACE_AFTER_TYPE_CAST", value: "false")
+                                    option(name: "INDENT_SIZE", value: "2")
+                                    option(name: "TAB_SIZE", value: "4")
+
+                                    // both this level and 'indentOptions' are used
+                                    option(name: "CONTINUATION_INDENT_SIZE", value: "4")
+                                    indentOptions {
+                                        option(name: "CONTINUATION_INDENT_SIZE", value: "4")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    option(name: "USE_PER_PROJECT_SETTINGS", value: "true")
+                }
+            }
+        }
+    }
+}
