@@ -16,6 +16,7 @@
 
 package com.twcable.gradle.sling
 
+import com.twcable.gradle.sling.osgi.BundleState
 import groovy.json.JsonBuilder
 
 class SlingServerFixture extends FixtureBase {
@@ -67,15 +68,20 @@ class SlingServerFixture extends FixtureBase {
             ]
         }
 
+        def actCount = bundles.count { SlingBundleFixture bundle -> bundle.bundleState.stateString == BundleState.ACTIVE.stateString }
+        def fraCount = bundles.count { SlingBundleFixture bundle -> bundle.bundleState.stateString == BundleState.FRAGMENT.stateString }
+        def resCount = bundles.count { SlingBundleFixture bundle -> bundle.bundleState.stateString == BundleState.RESOLVED.stateString }
+        def insCount = bundles.count { SlingBundleFixture bundle -> bundle.bundleState.stateString == BundleState.INSTALLED.stateString }
+
         [data  : data,
          s     : [
-             279,
-             272,
-             7,
-             0,
-             0
+             bundles.size(),
+             actCount,
+             fraCount,
+             resCount,
+             insCount
          ],
-         status: "Bundle information: 279 bundles in total - all 279 bundles active."
+         status: "Bundle information: ${bundles.size()} bundles in total - all 279 bundles active."
         ]
     }
 

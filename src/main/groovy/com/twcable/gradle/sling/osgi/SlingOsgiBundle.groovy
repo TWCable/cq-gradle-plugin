@@ -424,24 +424,30 @@ class SlingOsgiBundle {
         def resolved = statuses[3] as Integer
         def installed = statuses[4] as Integer
 
+        if (resolved == 0 && installed == 0) {
+            log.debug "There are no bundles in the \"resolved\" or \"installed\" state"
+            return true
+        }
+
         List<Map> data = json.data as List
 
-        def inactiveBundles = data.findAll { bundle ->
-            bundle.state == INSTALLED.stateString ||
-                bundle.state == RESOLVED.stateString
-        }.collect { it.symbolicName } as List<String>
+        def inactiveBundles = inactiveBudles(data).collect { it.symbolicName } as List<String>
 
         if (log.infoEnabled) inactiveBundles.each { log.info "Inactive bundle: ${it}" }
 
-        if (resolved == 0 && installed == 0) {
+        if (inactiveBundles.isEmpty() || !inactiveBundles.any { it.contains(groupProperty) })
             return true
-        }
-        else if (!inactiveBundles.isEmpty() && inactiveBundles.every { it.contains(groupProperty) }) {
-            return true
-        }
-        else {
+        else
             return false
-        }
+    }
+
+
+    private static Collection<Map> inactiveBudles(Collection<Map> knownBundles) {
+        return knownBundles.findAll { bundle ->
+            bundle.state == INSTALLED.stateString ||
+                bundle.state == RESOLVED.stateString ||
+                bundle.state == MISSING.stateString
+        } as Collection<Map>
     }
 
 
@@ -451,11 +457,7 @@ class SlingOsgiBundle {
                 bundle.state == FRAGMENT.stateString
         } as Collection<Map>
 
-        final inactiveBundles = knownBundles.findAll { bundle ->
-            bundle.state == INSTALLED.stateString ||
-                bundle.state == RESOLVED.stateString ||
-                bundle.state == MISSING.stateString
-        } as Collection<Map>
+        final inactiveBundles = inactiveBudles(knownBundles)
 
         if (log.infoEnabled) inactiveBundles.each { log.info("bundle ${it.symbolicName} NOT active: ${it.state}") }
         if (log.debugEnabled) activeBundles.each { log.debug("bundle ${it.symbolicName} IS active") }
@@ -495,13 +497,18 @@ class SlingOsgiBundle {
     }
 
 
-    void checkActiveBundles(String groupProperty, SimpleHttpClient httpClient, SlingSupport slingSupport, String serverName, URI bundleControlUriJson) {
+    @SuppressWarnings("GroovyUnnecessaryReturn")
+    void checkActiveBundles(String groupProperty, SimpleHttpClient httpClient, SlingServerConfiguration serverConf) {
+        def slingSupport = serverConf.slingSupport
+        def serverName = serverConf.name
+        def bundleControlUriJson = serverConf.bundleControlUriJson
+
         log.info "Checking for bundles status as Active on ${serverName} for ${groupProperty}"
 
         final pollingTxt = new DotPrinter()
         boolean bundlesActive = false
 
-        block(maxWaitMs, { bundlesActive == false }, {
+        block(maxWaitMs, { serverConf.active && bundlesActive == false }, {
             log.info pollingTxt.increment()
 
             def resp = slingSupport.doGet(bundleControlUriJson, httpClient)
@@ -517,9 +524,14 @@ class SlingOsgiBundle {
                     throw new GradleException("Could not parse \"${resp.body}\"", exp)
                 }
             }
+            else if (resp.code == HTTP_CLIENT_TIMEOUT) {
+                serverConf.active = false
+            }
         } as Closure<Void>, retryWaitMs)
 
-        if (bundlesActive == false)
+        if (serverConf.active == false)
+            return
+        else if (bundlesActive == false)
             throw new GradleException("Check Bundle Status FAILED: Not all bundles are ACTIVE on ${serverName}")
         else
             log.info("Bundles are ACTIVE on ${serverName}!")
