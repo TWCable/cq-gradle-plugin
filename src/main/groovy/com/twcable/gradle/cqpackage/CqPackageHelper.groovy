@@ -284,10 +284,10 @@ class CqPackageHelper {
         def slingServersConfiguration = slingServersConfiguration()
 
         slingServersConfiguration.each { slingServerConfiguration ->
-            slingServerConfiguration.slingSupport.doHttp { httpClient ->
-                slingBundle.checkActiveBundles(groupProperty, httpClient, slingServerConfiguration.slingSupport,
-                    slingServerConfiguration.name, slingServerConfiguration.bundleControlUriJson
-                )
+            def slingSupport = slingServerConfiguration.slingSupport
+
+            slingSupport.doHttp { httpClient ->
+                slingBundle.checkActiveBundles(groupProperty, httpClient, slingServerConfiguration)
             }
         }
     }

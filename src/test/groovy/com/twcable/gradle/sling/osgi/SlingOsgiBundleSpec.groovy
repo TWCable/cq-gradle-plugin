@@ -32,10 +32,11 @@ import static BundleState.FRAGMENT
 import static BundleState.INSTALLED
 import static BundleState.RESOLVED
 import static SlingOsgiBundle.doAcrossServers
+import static java.net.HttpURLConnection.HTTP_CLIENT_TIMEOUT
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND
 import static java.net.HttpURLConnection.HTTP_OK
 
-@SuppressWarnings(["GroovyAssignabilityCheck", "GroovyPointlessArithmetic", "GroovyUntypedAccess"])
+@SuppressWarnings(["GroovyAssignabilityCheck", "GroovyPointlessArithmetic", "GroovyUntypedAccess", "GroovyPointlessBoolean"])
 class SlingOsgiBundleSpec extends Specification {
 
     SlingBundleFixture slingBundleFixture
@@ -307,7 +308,7 @@ class SlingOsgiBundleSpec extends Specification {
     }
 
 
-    def "start Twc bundles"(SlingServerConfiguration srvr) {
+    def "start bundles"(SlingServerConfiguration srvr) {
         given:
         SlingServerFixture slingServerFixtureHasResolved = SlingServerFixture.make {
             add SlingBundleFixture.make {
@@ -443,6 +444,79 @@ class SlingOsgiBundleSpec extends Specification {
 
         then:
         thrown(GradleException)
+
+        where:
+        srvr << SlingBundleFixture.make {}.slingServersConfiguration.collect()
+    }
+
+
+    @Unroll
+    def "checkActiveBundles for ACTIVE on #srvr.name"(SlingServerConfiguration srvr) {
+        SlingServerFixture slingServerFixtureAllActive = SlingServerFixture.make {
+            add SlingBundleFixture.make {
+                symbolicName 'b.c.d.e'
+                version '1.0.2'
+                sourceFile new File("build/libs/b_c_d_e-1.0.2.jar")
+                bundleState ACTIVE
+            }
+        }
+
+        mockSlingSupport {
+            srvr.slingSupport = it
+            it.doGet(srvr.bundleControlUriJson, _) >>> new HttpResponse(HTTP_OK, slingServerFixtureAllActive.bundlesInformationJson())
+        }
+
+        when:
+        slingBundle.checkActiveBundles("com.test1", httpClient, srvr)
+
+        then:
+        true // the fact that no exception was thrown shows that it's good
+
+        where:
+        srvr << SlingBundleFixture.make {}.slingServersConfiguration.collect()
+    }
+
+
+    @Unroll
+    def "checkActiveBundles for RESOLVED on #srvr.name"(SlingServerConfiguration srvr) {
+        SlingServerFixture slingServerFixtureAllActive = SlingServerFixture.make {
+            add SlingBundleFixture.make {
+                symbolicName 'com.test.d.e'
+                version '1.0.2'
+                sourceFile new File("build/libs/b_c_d_e-1.0.2.jar")
+                bundleState RESOLVED
+            }
+        }
+
+        mockSlingSupport {
+            srvr.slingSupport = it
+            it.doGet(srvr.bundleControlUriJson, _) >>> new HttpResponse(HTTP_OK, slingServerFixtureAllActive.bundlesInformationJson())
+        }
+
+        when:
+        slingBundle.checkActiveBundles("com.test", httpClient, srvr)
+
+        then:
+        def exp = thrown(GradleException)
+        exp.message.contains("Not all bundles are ACTIVE")
+
+        where:
+        srvr << SlingBundleFixture.make {}.slingServersConfiguration.collect()
+    }
+
+
+    @Unroll
+    def "bad checkActiveBundles for TIMEOUT on #srvr.name"(SlingServerConfiguration srvr) {
+        mockSlingSupport {
+            srvr.slingSupport = it
+            it.doGet(srvr.bundleControlUriJson, _) >>> new HttpResponse(HTTP_CLIENT_TIMEOUT, '')
+        }
+
+        when:
+        slingBundle.checkActiveBundles("com.test1", httpClient, srvr)
+
+        then:
+        srvr.active == false
 
         where:
         srvr << SlingBundleFixture.make {}.slingServersConfiguration.collect()
