@@ -86,7 +86,9 @@ bintray {
 
         //noinspection GroovyAssignabilityCheck
         version {
-            desc = 'First public release'
+            //  desc = 'First public release'
+            //noinspection GrReassignedInClosureLocalVar
+            name = project.version.bintrayVersion
         }
     }
 }
@@ -118,7 +120,7 @@ class Version {
         originalVersion = versionValue
         if (originalVersion.endsWith('-SNAPSHOT')) {
             status = 'integration'
-            thisVersion = originalVersion.substring(0, originalVersion.length() - 'SNAPSHOT'.length()) + getTimestamp()
+            thisVersion = originalVersion - 'SNAPSHOT' + getTimestamp()
         }
         else {
             status = 'release'
@@ -137,8 +139,14 @@ class Version {
 
 
     String toString() {
+        originalVersion
+    }
+
+
+    String getBintrayVersion() {
         thisVersion
     }
+
 }
 
 //*************************************************************************
