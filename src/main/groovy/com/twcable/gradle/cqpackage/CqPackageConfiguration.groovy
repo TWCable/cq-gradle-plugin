@@ -50,6 +50,7 @@ class CqPackageConfiguration {
         packageExclusions = [
             exclude([group: 'com.day.cq']),
             exclude([group: 'com.day.cq.wcm']),
+            exclude([group: 'com.adobe.aem']),
             exclude([group: 'commons-codec']),
             exclude([group: 'commons-io']),
             exclude([group: 'commons-lang3']),
