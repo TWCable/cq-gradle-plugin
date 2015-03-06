@@ -452,6 +452,7 @@ class CqPackagePlugin implements Plugin<Project> {
             packageDeps.with { // TODO: should come from configuration
                 exclude group: 'com.day.cq'
                 exclude group: 'com.day.cq.wcm'
+                exclude group: 'com.adobe.aem'
                 exclude group: 'commons-codec'
                 exclude group: 'commons-io'
                 exclude group: 'commons-lang3'
@@ -481,6 +482,7 @@ class CqPackagePlugin implements Plugin<Project> {
             packageDeps.with { // TODO: this really should come from config
                 exclude group: 'com.day.cq'
                 exclude group: 'com.day.cq.wcm'
+                exclude group: 'com.adobe.aem'
                 exclude group: 'commons-codec'
                 exclude group: 'commons-io'
                 exclude group: 'commons-lang3'
