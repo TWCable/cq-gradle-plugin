@@ -22,6 +22,8 @@ dependencies {
     testCompile "org.codehaus.groovy:groovy-all:2.3.6"
     testCompile "org.gradle:gradle-core:2.2"
 
+    compile "commons-io:commons-io:1.4"
+
     compile "org.apache.httpcomponents:httpclient:${httpcomponents_version}"
     compile "org.apache.httpcomponents:httpmime:${httpcomponents_version}"
 
