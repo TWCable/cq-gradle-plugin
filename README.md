@@ -7,7 +7,10 @@ This contains a number of plugins for making it easier to work with Gradle and A
 ```
 buildscript {
     repositories {
-        mavenRepo url: "http://dl.bintray.com/twcable/aem"
+        jcenter()
+        maven {
+            url "http://dl.bintray.com/twcable/aem"
+        }
     }
 
     dependencies {
