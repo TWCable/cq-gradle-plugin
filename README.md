@@ -19,6 +19,8 @@ buildscript {
 }
 ```
 
+[ ![Download](https://api.bintray.com/packages/twcable/aem/cq-gradle-plugins/images/download.svg) ](https://bintray.com/twcable/aem/cq-gradle-plugins/_latestVersion)
+
 # Plugins #
 
 ## CQ Package Plugin ##
