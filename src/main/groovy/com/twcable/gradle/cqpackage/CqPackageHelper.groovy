@@ -126,7 +126,7 @@ class CqPackageHelper {
 
 
     void installPackage() {
-        def command = new CqPackageCommand('install', this, {
+        def command = new CqPackageCommand('install', this, { SlingServerConfiguration serverConfig, String jsonMsg ->
             return false
         }, false)
 
