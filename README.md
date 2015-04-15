@@ -14,7 +14,7 @@ buildscript {
     }
 
     dependencies {
-        classpath "com.twcable.gradle:cq-gradle-plugins:2.0.2"
+        classpath "com.twcable.gradle:cq-gradle-plugins:2.0.3"
     }
 }
 ```

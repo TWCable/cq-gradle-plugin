@@ -1,5 +1,9 @@
 # RELEASE NOTES
 
+## 2.0.3
+
+* Fixed issue with installPackage task ( #16 )
+
 ## 2.0.2
 
 * Exclude group com.adobe.aem for AEM 6.0 ( #12 )
