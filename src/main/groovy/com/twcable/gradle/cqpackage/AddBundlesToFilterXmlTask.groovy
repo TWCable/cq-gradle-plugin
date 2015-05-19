@@ -22,6 +22,8 @@ import groovy.util.logging.Slf4j
 import org.apache.commons.io.IOUtils
 import org.gradle.api.DefaultTask
 import org.gradle.api.Project
+import org.gradle.api.artifacts.DependencySet
+import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.bundling.Jar
@@ -229,7 +231,9 @@ class AddBundlesToFilterXmlTask extends DefaultTask {
 
 
         static Collection<String> getAllNativeProjectJarNames(Project project) {
-            Collection<Project> allNativeOsgiProjects = project.rootProject.subprojects.findAll { Project proj ->
+            DependencySet dependencies = project.configurations.getByName('runtime').allDependencies
+            Collection<ProjectDependency> projectDependencies = dependencies.findAll{ it in ProjectDependency }.collect { it as ProjectDependency }
+            Collection<Project> allNativeOsgiProjects = projectDependencies.collect { it.getDependencyProject() }.findAll { Project proj ->
                 proj.plugins.findPlugin('osgi') != null
             }
             Collection<String> allNativeProjectJarNames = allNativeOsgiProjects.collect { Project proj ->
