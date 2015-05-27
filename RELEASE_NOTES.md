@@ -1,5 +1,9 @@
 # RELEASE NOTES
 
+## 2.1.0
+
+* Gets projects from dependencies and not just all sibling projects ( #17 )
+
 ## 2.0.3
 
 * Fixed issue with installPackage task ( #16 )
