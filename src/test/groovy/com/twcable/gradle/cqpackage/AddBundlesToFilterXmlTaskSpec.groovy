@@ -39,6 +39,10 @@ class AddBundlesToFilterXmlTaskSpec extends Specification {
         createSubProject(rootProject, 'subproject2', true)
         createSubProject(rootProject, 'subproject3', false)
 
+        rootProject.dependencies.add('runtime', rootProject.findProject("subproject1"))
+        rootProject.dependencies.add('runtime', rootProject.findProject("subproject2"))
+        rootProject.dependencies.add('runtime', rootProject.findProject("subproject3"))
+
         task = rootProject.tasks.getByName('addBundlesToFilterXml') as AddBundlesToFilterXmlTask
 
         when:
@@ -111,6 +115,45 @@ class AddBundlesToFilterXmlTaskSpec extends Specification {
             '/apps/install',
             '/apps/install'
         ]
+    }
+
+    def "does not include subprojects that are not dependencies"() {
+        given:
+        Project rootProject = createCqPackageProject('2.3.4', '/apps/install')
+
+        createSubProject(rootProject, 'subproject1', true)
+        createSubProject(rootProject, 'subproject2', true)
+        createSubProject(rootProject, 'subproject3', false)
+        rootProject.dependencies.add('runtime', rootProject.findProject("subproject1"))
+
+        task = rootProject.tasks.getByName('addBundlesToFilterXml') as AddBundlesToFilterXmlTask
+
+        def before = [
+            {
+                workspaceFilter(version: "1.0") {
+                    filter(root: "/apps/install")
+                }
+
+            }
+        ]
+
+        def after = [
+            {
+                workspaceFilter(version: "1.0") {
+                    filter(root: "/apps/install") {
+                        exclude(pattern: "/apps/install/20/groovy-all-2.1.6.jar")
+                        exclude(pattern: "/apps/install/30/subproject1-2.3.4.jar")
+                    }
+                }
+            }
+        ]
+
+
+        when:
+        def processed = process(xml(before), ['groovy-all-2.1.6.jar', 'subproject1-2.3.4.jar'])
+
+        then:
+        xml(processed) == xml(after)
     }
 
     // **********************************************************************
