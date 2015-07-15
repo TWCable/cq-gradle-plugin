@@ -397,7 +397,12 @@ class CqPackageHelper {
                 }
 
                 def bundleSymbolicName = getSymbolicName(jarFile)
-                symbolicNames.add(bundleSymbolicName)
+                if (bundleSymbolicName != null) {
+                    symbolicNames.add(bundleSymbolicName)
+                }
+                else {
+                    logger.warn "${file} contains a non-OSGi jar file: ${jarFile}"
+                }
                 logger.debug("Cleaning up. Deleting $jarFile...")
                 jarFile.delete()
             }

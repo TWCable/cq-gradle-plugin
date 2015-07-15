@@ -336,7 +336,7 @@ class CqPackagePlugin implements Plugin<Project> {
             // name match this project's group name
             if (serversConfiguration.uninstallBundlesPredicate == null) {
                 serversConfiguration.uninstallBundlesPredicate = { String symbolicName ->
-                    symbolicName.contains(project.group as CharSequence)
+                    symbolicName?.contains(project.group as CharSequence)
                 }
             }
 
