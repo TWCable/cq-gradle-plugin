@@ -23,7 +23,6 @@ import com.twcable.gradle.sling.SlingServersConfiguration
 import com.twcable.gradle.sling.SlingSupport
 import groovy.json.JsonBuilder
 import org.gradle.api.Project
-import org.gradle.api.tasks.bundling.Zip
 import org.gradle.testfixtures.ProjectBuilder
 import org.slf4j.Logger
 import spock.lang.Specification
@@ -39,7 +38,6 @@ class CqPackageHelperSpec extends Specification {
     def slingServersConfiguration = Mock(SlingServersConfiguration)
     def slingServerConfiguration = Mock(SlingServerConfiguration)
     def slingSupport = Mock(SlingSupport)
-    CqPackageConfiguration cqPackageConf
 
 
     def setup() {
@@ -51,16 +49,13 @@ class CqPackageHelperSpec extends Specification {
         SimpleHttpClient httpClient = Mock(SimpleHttpClient)
         slingSupport.doHttp(_) >> { Closure closure -> closure.delegate = slingSupport; closure.call(httpClient) }
 
-        Project project = ProjectBuilder.builder().build()
+        Project project = ProjectBuilder.builder().withName("fakepackage").build()
 
         project.extensions.add('slingServers', slingServersConfiguration)
 
-        cqPackageConf = project.extensions.create(CqPackageConfiguration.NAME, CqPackageConfiguration, project)
-        cqPackageConf.packageName = 'fakepackage'
-
         cqPackageHelper = project.extensions.create(CqPackageHelper.NAME, CqPackageHelper, project)
 
-        project.task([type: Zip], 'createPackage')
+        project.tasks.create('createPackage', CreatePackageTask)
     }
 
 

@@ -157,14 +157,14 @@ class EnvironmentJsonFileReader {
 
 
     private static Map<String, SlingServerConfiguration> jsonMapToServerConfMap(Map environment, Map hostAndPort) {
-        hostAndPort.collectEntries { hostname, port ->
+        return hostAndPort.collectEntries { hostname, port ->
             return ["${hostname}-${port}":
                         new SlingServerConfiguration(
                             name: "${hostname}-${port}", protocol: (String)environment.protocol, port: ((String)port).toInteger(),
                             machineName: "${hostname}.${environment.domainName}", username: (String)environment.username,
                             password: (String)environment.password
                         )] as Map<String, SlingServerConfiguration>
-        }
+        } as Map<String, SlingServerConfiguration>
     }
 
 }

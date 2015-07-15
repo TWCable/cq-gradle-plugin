@@ -29,7 +29,7 @@ dependencies {
 
     compile "org.apache.felix:org.apache.felix.scr.generator:${scr_version}"
     compile "org.apache.felix:org.apache.felix.scr.ant:${scr_version}"
-    compile "biz.aQute:bndlib:1.50.0"
+    compile "biz.aQute.bnd:bndlib:2.1.0"
 
     // @Nonnull @Nullable etc annotations
     compile "com.google.code.findbugs:jsr305:2.0.0"

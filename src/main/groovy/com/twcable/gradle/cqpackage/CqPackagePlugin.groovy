@@ -20,15 +20,12 @@ import com.twcable.gradle.sling.SlingServersConfiguration
 import com.twcable.gradle.sling.osgi.SlingBundleConfiguration
 import groovy.transform.TypeChecked
 import org.gradle.api.DefaultTask
-import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
 import org.gradle.api.artifacts.Configuration
-import org.gradle.api.file.CopySpec
 import org.gradle.api.internal.TaskInternal
 import org.gradle.api.internal.tasks.execution.TaskValidator
-import org.gradle.api.tasks.bundling.Zip
 
 import static com.twcable.gradle.GradleUtils.extension
 
@@ -38,12 +35,10 @@ import static com.twcable.gradle.GradleUtils.extension
  *
  * <h1>Description</h1>
  * Adds tasks for working with CQ Packages via the Sling HTTP interface.
- * <p>
- * The package's configuration is controlled by setting properties on the {@link CqPackageConfiguration}.
  *
  * <h1>Tasks</h1>
  * <table>
- *  <tr><td>createPackage</td><td>Creates the CQ Package zip file. (Depends on the `jar` tasks of the projects that are a part of the `cq_package` configuration.)</td></tr>
+ *  <tr><td>createPackage</td><td>Creates the CQ Package zip file.</td></tr>
  *  <tr><td>install</td><td>Issues the command to CQ to install the uploaded package.</td></tr>
  *  <tr><td>uninstall</td><td>Uninstalls the CQ Package. If the package is not on the server, nothing happens. (i.e., This does not fail if the package is not on the server.)</td></tr>
  *  <tr><td>reinstall</td><td>Reinstalls (removes then uploads and installs a fresh copy) the CQ Package. (Depends on `clean`, `uninstall`, `remove`, `install`, `verifyBundles`)</td></tr>
@@ -65,35 +60,26 @@ import static com.twcable.gradle.GradleUtils.extension
  * <h1>Artifact Configurations</h1>
  * <table>
  *   <tr><th>name</th><th>description</th></tr>
- *   <tr><td>cq_package</td><td>All the project bundles that should be packaged in the zip</td></tr>
- *   <tr><td>native_cq_package</td><td>All the third-party bundles that should be packaged in the zip</td></tr>
+ *   <tr><td>cq_package</td><td>All the project and third-party bundles that should be packaged in the zip</td></tr>
  * </table>
  * <p>
- * "native_cq_package" only applies if the {@link CqPackageConfiguration#nativeStartLevel} and
- * {@link CqPackageConfiguration#dependencyStartLevel} have both been set.
- * <p>
- * <b><u>Note</u>:</b> "native_cq_package" is deprecated and will be rolled into "cq_package" in the future.
  *
  * @see SlingServersConfiguration
+ * @see CreatePackageTask
  */
 @TypeChecked
 @SuppressWarnings(["GroovyResultOfAssignmentUsed", "GrMethodMayBeStatic"])
 class CqPackagePlugin implements Plugin<Project> {
 
-    public static final String NATIVE_CQ_PACKAGE = 'native_cq_package'
     public static final String CQ_PACKAGE = 'cq_package'
 
 
     @Override
-    @SuppressWarnings("GroovyAssignabilityCheck")
     void apply(Project project) {
         project.logger.info("Applying ${this.class.name} to ${project}")
 
-        project.logger.debug("Creating configurations: ${CQ_PACKAGE} and ${NATIVE_CQ_PACKAGE}")
-        project.configurations.create CQ_PACKAGE
-        project.configurations.create NATIVE_CQ_PACKAGE
+        addDepConfiguration(project)
 
-        extension(project, CqPackageConfiguration, project)
         extension(project, CqPackageHelper, project)
         extension(project, SlingBundleConfiguration, project)
         extension(project, SlingServersConfiguration)
@@ -103,10 +89,35 @@ class CqPackagePlugin implements Plugin<Project> {
     }
 
 
+    @SuppressWarnings("GroovyAssignabilityCheck")
+    private void addDepConfiguration(Project project) {
+        project.logger.debug("Creating configuration: ${CQ_PACKAGE}")
+        def cqPackageConf = project.configurations.create CQ_PACKAGE
+
+        // attach to "runtime", but don't insist that it have to be there first (or will ever be there)
+        def runtimeConf = project.configurations.findByName("runtime")
+        if (runtimeConf == null) {
+            project.configurations.whenObjectAdded {
+                if (it instanceof Configuration) {
+                    Configuration conf = (Configuration)it
+                    if (conf.name == "runtime") {
+                        cqPackageConf.extendsFrom(conf)
+                    }
+                }
+            }
+        }
+        else {
+            cqPackageConf.extendsFrom(runtimeConf)
+        }
+    }
+
+
     private void addTasks(Project project) {
         project.logger.debug "Adding tasks for ${this.class.name} to ${project}"
-        addBundlesToFilterXml(project)
-        createPackage(project)
+
+        def verifyBundles = verifyBundles(project)
+        def addBundlesToFilterXml = addBundlesToFilterXml(project)
+        createPackage(project, addBundlesToFilterXml, verifyBundles)
 
         uninstallBundles(project)
         uninstall(project)
@@ -116,7 +127,6 @@ class CqPackagePlugin implements Plugin<Project> {
         installPackage(project)
         installRemoteTask(project)
 
-        verifyBundles(project)
         validateBundles(project)
 
         validateRemoteBundles(project)
@@ -151,8 +161,8 @@ class CqPackagePlugin implements Plugin<Project> {
     }
 
 
-    private void verifyBundles(Project project) {
-        project.tasks.create('verifyBundles').configure { Task task ->
+    private Task verifyBundles(Project project) {
+        return project.tasks.create('verifyBundles') { Task task ->
             task.description = "Checks all the JARs that are included in the package to make sure they are " +
                 "installed and in an ACTIVE state and gives a report of any that are not. This task polls in the " +
                 "case the bundles are newly installed."
@@ -354,11 +364,10 @@ class CqPackagePlugin implements Plugin<Project> {
     }
 
 
-    Task addBundlesToFilterXml(Project project) {
+    AddBundlesToFilterXmlTask addBundlesToFilterXml(Project project) {
         def task = project.tasks.create('addBundlesToFilterXml', AddBundlesToFilterXmlTask)
         task.description = "Adds the bundles to the filter.xml"
         task.group = 'CQ'
-        task.dependsOn cqPackageDependencies(project)
         return task
     }
 
@@ -377,133 +386,16 @@ class CqPackagePlugin implements Plugin<Project> {
     }
 
 
-    Zip createPackage(Project project) {
-        Zip task = project.task([
-            type       : Zip,
-            description: "Creates the CQ Package zip file",
-            group      : 'CQ',
-        ], 'createPackage') as Zip
-        task.dependsOn 'addBundlesToFilterXml', 'verifyBundles'
-
-        task.with {
-            inputs.dir project.file('/src/main/content') // TODO should be available from configuration...
-            inputs.file cqPackageDependencies(project)
-
-            // don't know why this isn't being set automatically, but...
-            baseName = project.name
-            version = project.version
-
-            from 'src/main/content'
-
-            // TODO should be available from configuration...
-            exclude '**/.git'
-            exclude '**/.git/**'
-            exclude '**/.gitattributes'
-            exclude '**/.gitignore'
-            exclude '**/.gitmodules'
-            exclude '**/.vlt'
-            exclude 'jcr_root/.vlt-sync-config.properties'
-            exclude 'jcr_root/var/**'
-            exclude 'META-INF/vault/definition/.content.xml'
-            exclude 'META-INF/vault/filter.xml'
-            exclude 'SLING-INF/**'
-
-            addBundles(project, task)
-
-            into('META-INF/vault/definition') {
-                from project.file('src/main/content/META-INF/vault/definition/.content.xml')
-                expand(project.properties)
-            }
-
-            into('META-INF/vault') {
-                from project.file("${project.buildDir}/tmp/filter.xml")
-            }
-        }
-
-        task.dependsOn cqPackageDependencies(project)
+    CreatePackageTask createPackage(Project project, AddBundlesToFilterXmlTask addBundlesToFilterXmlTask, Task verifyBundles) {
+        def task = project.tasks.create("createPackage", CreatePackageTask) as CreatePackageTask
+        task.dependsOn verifyBundles, addBundlesToFilterXmlTask
 
         return task
     }
 
 
     public static Configuration cqPackageDependencies(Project project) {
-        return project.configurations.getByName('cq_package')
-    }
-
-
-    void addBundles(Project project, Zip packageTask) {
-        // If these properties are present we can split the install into start levels
-        // But give the project a chance to initialize first so the properties can be set
-
-        project.afterEvaluate {
-            def packageConfiguration = project.extensions.findByType(CqPackageConfiguration)
-
-            def bundleInstallRoot = packageConfiguration.bundleInstallRoot
-            if (!bundleInstallRoot) throw new GradleException("Can not have an empty bundleInstallRoot")
-
-            def nativeStartLevel = packageConfiguration.nativeStartLevel
-            def dependencyStartLevel = packageConfiguration.dependencyStartLevel
-
-            if (nativeStartLevel && dependencyStartLevel) {
-                addBundlesWithStartLevels(project, packageTask, bundleInstallRoot, nativeStartLevel, dependencyStartLevel)
-            }
-            else {
-                addBundlesWithNoStartLevels(packageTask, bundleInstallRoot, project)
-            }
-        }
-    }
-
-
-    void addBundlesWithNoStartLevels(Zip packageTask, String bundleInstallRoot, Project project) {
-        packageTask.into("jcr_root${bundleInstallRoot}") { CopySpec spec ->
-            Configuration packageDeps = cqPackageDependencies(project)
-            packageDeps.with { // TODO: should come from configuration
-                exclude group: 'com.day.cq'
-                exclude group: 'com.day.cq.wcm'
-                exclude group: 'com.adobe.aem'
-                exclude group: 'commons-codec'
-                exclude group: 'commons-io'
-                exclude group: 'commons-lang3'
-                exclude group: 'javax.jcr'
-                exclude group: 'javax.servlet.jsp'
-                exclude group: 'org.apache.felix', module: 'org.osgi.compendium'
-                exclude group: 'org.apache.felix', module: 'org.osgi.core'
-                exclude group: 'org.apache.sling'
-                exclude group: 'org.slf4j'
-            }
-
-            spec.from packageDeps
-        }
-    }
-
-
-    void addBundlesWithStartLevels(Project project, Zip packageTask, String bundleInstallRoot,
-                                   String nativeStartLevel, String dependencyStartLevel) {
-        Configuration native_cq_package = project.configurations.getByName('native_cq_package')
-
-        packageTask.into("jcr_root${bundleInstallRoot}/${nativeStartLevel}") { CopySpec spec ->
-            spec.from native_cq_package
-        }
-
-        packageTask.into("jcr_root${bundleInstallRoot}/${dependencyStartLevel}") { CopySpec spec ->
-            Configuration packageDeps = cqPackageDependencies(project)
-            packageDeps.with { // TODO: this really should come from config
-                exclude group: 'com.day.cq'
-                exclude group: 'com.day.cq.wcm'
-                exclude group: 'com.adobe.aem'
-                exclude group: 'commons-codec'
-                exclude group: 'commons-io'
-                exclude group: 'commons-lang3'
-                exclude group: 'javax.jcr'
-                exclude group: 'javax.servlet.jsp'
-                exclude group: 'org.apache.felix', module: 'org.osgi.compendium'
-                exclude group: 'org.apache.felix', module: 'org.osgi.core'
-                exclude group: 'org.apache.sling'
-                exclude group: 'org.slf4j'
-            }
-
-            spec.from packageDeps - native_cq_package
-        }
+        return project.configurations.getByName(CQ_PACKAGE)
     }
 
 

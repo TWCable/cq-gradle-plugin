@@ -19,9 +19,13 @@ package com.twcable.gradle
 import groovy.transform.CompileStatic
 import groovy.transform.TypeChecked
 import groovy.transform.TypeCheckingMode
+import org.gradle.api.GradleException
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.internal.TaskInternal
 import org.gradle.api.internal.tasks.CachingTaskDependencyResolveContext
+
+import javax.annotation.Nonnull
 
 @CompileStatic
 class GradleUtils {
@@ -33,6 +37,28 @@ class GradleUtils {
         def confName = confClass.getDeclaredField("NAME").get(null) as String
         project.logger.debug "Creating extension \"${confName}\" with ${confClass.name} with ${args}"
         return project.extensions.create(confName, confClass, args)
+    }
+
+    /**
+     * Execute a task with its dependencies
+     */
+    static void execute(@Nonnull Task task) {
+        def context = new CachingTaskDependencyResolveContext()
+        executeWithCtx(task, context)
+    }
+
+
+    private static void executeWithCtx(@Nonnull Task task, @Nonnull CachingTaskDependencyResolveContext context) {
+        def dependencies = context.getDependencies(task) as Set<Task>
+
+        dependencies.each { Task depTask ->
+            executeWithCtx(depTask, context)
+        }
+
+        if (task instanceof TaskInternal)
+            ((TaskInternal)task).execute()
+        else
+            throw new GradleException("Don't know what to do with ${task} - ${task.getClass().name}")
     }
 
 

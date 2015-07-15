@@ -51,7 +51,7 @@ import static java.net.HttpURLConnection.HTTP_CLIENT_TIMEOUT
 import static java.net.HttpURLConnection.HTTP_OK
 
 /**
- * Has external dependencies on {@link SlingServersConfiguration}, {@link CqPackageConfiguration}
+ * Has external dependencies on {@link SlingServersConfiguration}
  */
 @CompileStatic
 @SuppressWarnings("GrMethodMayBeStatic")
@@ -95,11 +95,6 @@ class CqPackageHelper {
     }
 
 
-    private CqPackageConfiguration cqPackageExtension() {
-        project.extensions.getByType(CqPackageConfiguration)
-    }
-
-
     private SlingServersConfiguration slingServersConfiguration() {
         project.extensions.getByType(SlingServersConfiguration)
     }
@@ -119,9 +114,11 @@ class CqPackageHelper {
         return slingServersConfiguration().maxWaitValidateBundlesMs
     }
 
-
+    /**
+     * Returns the name of the project, which is used as the name of the package.
+     */
     String getPackageName() {
-        cqPackageExtension().packageName
+        project.name
     }
 
 
@@ -209,12 +206,30 @@ class CqPackageHelper {
 
 
     void uploadPackage() {
-        File sourceFile = cqPackageExtension().packageFile
+        File sourceFile = getPackageFile()
 
         final slingServersConfiguration = slingServersConfiguration()
         slingServersConfiguration.each { SlingServerConfiguration serverConfig ->
             uploadThePackage(sourceFile, serverConfig)
         }
+    }
+
+    /**
+     * Returns the CQ Package file to use.
+     *
+     * If a System Property of "package" is set, that is used. Otherwise the output of
+     * the 'createPackage' task is used.
+     */
+    @Nonnull
+    File getPackageFile() {
+        def packageProperty = System.getProperty('package')
+        if (packageProperty != null) {
+            return new File(packageProperty)
+        }
+
+        def file = project.tasks.withType(CreatePackageTask).first().archivePath
+        project.logger.info("No remote package passed in. Using createPackage zip: ${file}")
+        return file
     }
 
 

@@ -23,7 +23,7 @@ import org.gradle.testfixtures.ProjectBuilder
 import spock.lang.Specification
 import spock.lang.Unroll
 
-import static com.twcable.gradle.cqpackage.CqPackageTestUtils.addProjectToNativeCqPackage
+import static com.twcable.gradle.cqpackage.CqPackageTestUtils.addProjectToCompile
 import static com.twcable.gradle.cqpackage.CqPackageTestUtils.createSubProject
 
 class CqPackagePluginSpec extends Specification {
@@ -34,7 +34,7 @@ class CqPackagePluginSpec extends Specification {
     def setup() {
         project = CqPackageTestUtils.createCqPackageProject()
         def subproject1 = createSubProject(project, 'subproject1', true)
-        addProjectToNativeCqPackage(project, subproject1)
+        addProjectToCompile(project, subproject1)
     }
 
 

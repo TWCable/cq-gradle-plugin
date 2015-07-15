@@ -81,14 +81,11 @@ class CqPackageCommand implements Runnable {
         return project.extensions.getByType(SlingServersConfiguration)
     }
 
-
-    CqPackageConfiguration getCqPackageConfiguration() {
-        return project.extensions.getByType(CqPackageConfiguration)
-    }
-
-
+    /**
+     * Returns the name of the project, which is used as the name of the package.
+     */
     String getPackageName() {
-        cqPackageConfiguration.packageName
+        project.name
     }
 
 

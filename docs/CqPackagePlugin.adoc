@@ -1,0 +1,206 @@
+= CQ Package Plugin
+:toc:
+:toc-placement!:
+:toc-title:
+
+toc::[]
+
+== Usage
+
+`apply plugin: "cqpackage"`
+
+The standard Gradle "base" plugin is automatically applied.
+
+== Tasks
+
+[horizontal]
+createPackage::
+  Creates the CQ Package zip file. See description below.
+
+install::
+  Issues the command to CQ to install the uploaded package.
+
+uninstall::
+  Uninstalls the CQ Package. If the package is not on the server, nothing happens.
+  (i.e., This does not fail if the package is not on the server.)
+
+reinstall::
+  Convenience task that simple depends on `clean`, `uninstall`, `remove`, `install`, then `verifyBundles`.
+
+installPackage::
+  Installs the CQ Package
+
+validateBundles::
+  Checks all the JARs that are included in the package to make sure they are installed and in an
+  ACTIVE state and gives a report of any that are not. This task polls in the case the bundles are newly installed.
+
+installRemote::
+  Issues the command to CQ to install the uploaded package to a remote server defined
+  by `-Denvironment`, `-DenvJson`, and `-Dpackage`.
+
+validateRemoteBundles::
+  Validates remote bundles in the CQ Package are started correctly
+
+upload::
+  Upload the package to all the servers defined by the `slingServers` configuration.
+
+uploadRemote::
+  Upload the package to all the servers defined by `-Denvironment`, `-DenvJson`, and `-Dpackage`.
+
+remove::
+  Removes the package from CQ. Does not fail if the package was not on the server to begin with.
+
+uninstallBundles::
+  Downloads the currently installed package .zip file if it exists, compiles list of bundles
+  based off what is currently installed, then stops and uninstalls each bundles individually. A final
+  `refreshAllBundles` is performed.
+
+installRemoteTask::
+  Installs a specified CQ Package to a remote environment.
+
+verifyBundles::
+  Checks all the JARs that are included in the package to make sure they are OSGi compliant, and
+  gives a report of any that are not. Never causes the build to fail.
+
+addBundlesToFilterXml::
+  Adds the bundles to the `filter.xml`
+
+checkBundleStatus::
+  Check Bundle Status
+
+startInactiveBundles::
+  Asynchronously attempts to start any bundle in RESOLVED state.
+
+**Added by the 'base' plugin:**
+
+[horizontal]
+assemble::
+  Calls `createPackage`.
+
+clean::
+  Removes the build directory.
+
+
+== Configuration
+
+=== Convention: `slingServers`
+
+By default, the plugin is initialized with the following effective configuration:
+
+[source,groovy]
+--
+slingServers.with {
+  retryWaitMs = 1000
+  maxWaitValidateBundlesMs = 10000
+  clusterAuths = false
+  clusterPubs = false
+  uninstallBundlesPredicate = { false }
+  author.with {
+    protocol = 'http'
+    port = 4502
+    machineName = 'localhost'
+    username = 'admin'
+    password = 'admin'
+    installPath = '/apps/install'
+    active = true
+  }
+  publisher.with {
+    protocol = 'http'
+    port = 4503
+    machineName = 'localhost'
+    username = 'admin'
+    password = 'admin'
+    installPath = '/apps/install'
+    active = true
+  }
+}
+--
+
+To change the password for the author instance, for example, in the `build.gradle` file do
+
+[source,groovy]
+slingServers.author.password = "other_password"
+
+The `active` property determines if it will try to interact with that server. If it has a problem connecting to
+the server, it is automatically set to be `false` so it does not keep trying to attach to a server that is not running.
+
+If `envJson` and `environment` properties are defined, the list of servers for this environment are extracted from
+the JSON file.  See link:../src/main/groovy/com/twcable/gradle/sling/EnvironmentJsonFileReader.groovy[EnvironmentJsonFileReader]
+
+
+== Task `createPackage`
+
+This will create the `.zip` files that encapsulates a CQ Package file. It extends the `Zip` Gradle task, adding
+special features to make it easier to work with for the specifics that CQ wants.
+
+=== Features
+
+Inclusion of bundles to install::
+  By default any OSGi bundles that are depended upon by the project will be copied into the /apps/install folder to be
+  https://sling.apache.org/documentation/bundles/jcr-installer-provider.html[automatically installed by Sling upon package installation].
+
+Variable substitution of `META-INF/vault/definition/.content.xml` and `META-INF/vault/properties.xml`::
+  The source files will be treated as templates with the Project properties passed in for substitution. Particularly
+  useful for things like `${version}`
+
+Explicit inclusion of bundles in `filter.xml`::
+  Each of the bundles installed by the package receive their own `<filter/>` line in `filter.xml` to ensure that
+  it gets cleanly removed upon package uninstallation without stepping on bundles that other packages may
+  have installed. (Done via the `addBundlesToFilterXml` task, which uses the configuration of `createPackage`.)
+
+=== Configuration
+
+[horizontal]
+bundleInstallRoot::
+  Where to install included bundles in the JCR. **Defaults to `"/apps/install"`**
+
+contentSrc::
+  The filesystem location to act as the top-level of the content to put in the package.
+  **Defaults to project.file("src/main/content")**
+
+fileExclusions::
+  Mutable list of common exclusions such as ++"**/.vlt", "**/.git/**"++, etc.
+  Generally to modify this list you would mutate this in-place.
+
+addAllBundles()::
+  All the bundles that this depends on (project and non-project) will be copied into the _bundleInstallRoot_.
+  **This is the default behavior.**
+
+addProjectBundles()::
+  Only the project-generated bundles that this depends on will be copied into
+  the _bundleInstallRoot_.
+
+addNonProjectBundles()::
+  Only the non-project generated bundles that this depends on be will copied into
+  the _bundleInstallRoot_.
+
+addNoBundles()::
+  None of the bundles that this depends on will be copied into the _bundleInstallRoot_.
+
+
+==== Example usage
+
+[source,groovy]
+--
+createPackage {
+    addProjectBundles()
+}
+--
+
+=== Dependency Configuration: `cq_package`
+
+`cq_package` extends the `runtime` configuration, if it exists.
+
+Example usage:
+
+[source,groovy]
+--
+dependencies {
+    compile project(':project-name')
+    compile "net.tanesha:recaptcha4j:1.0.0"
+}
+
+configurations.cq_package {
+    exclude group: 'javax.servlet', module: 'servlet-api'
+}
+--
