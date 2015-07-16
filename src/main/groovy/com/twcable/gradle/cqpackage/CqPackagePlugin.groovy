@@ -80,11 +80,18 @@ import static com.twcable.gradle.GradleUtils.extension
 @SuppressWarnings(["GroovyResultOfAssignmentUsed", "GrMethodMayBeStatic"])
 class CqPackagePlugin implements Plugin<Project> {
 
+    public static final String NATIVE_CQ_PACKAGE = 'native_cq_package'
+    public static final String CQ_PACKAGE = 'cq_package'
+
+
     @Override
     @SuppressWarnings("GroovyAssignabilityCheck")
     void apply(Project project) {
-        project.configurations.create 'cq_package'
-        project.configurations.create 'native_cq_package'
+        project.logger.info("Applying ${this.class.name} to ${project}")
+
+        project.logger.debug("Creating configurations: ${CQ_PACKAGE} and ${NATIVE_CQ_PACKAGE}")
+        project.configurations.create CQ_PACKAGE
+        project.configurations.create NATIVE_CQ_PACKAGE
 
         extension(project, CqPackageConfiguration, project)
         extension(project, CqPackageHelper, project)
@@ -92,12 +99,12 @@ class CqPackagePlugin implements Plugin<Project> {
         extension(project, SlingServersConfiguration)
 
         addTasks(project)
-
         // GradleUtils.taskDependencyGraph(project)
     }
 
 
     private void addTasks(Project project) {
+        project.logger.debug "Adding tasks for ${this.class.name} to ${project}"
         addBundlesToFilterXml(project)
         createPackage(project)
 
@@ -119,6 +126,7 @@ class CqPackagePlugin implements Plugin<Project> {
         install(project)
         installRemote(project)
         reinstall(project)
+        project.logger.debug "Finished adding tasks for ${this.class.name} to ${project}"
     }
 
     // TODO: Should be able to get rid of 'installRemoteTask'
@@ -283,7 +291,7 @@ class CqPackagePlugin implements Plugin<Project> {
 
     Task remove(Project project) {
         Task removeTask = project.task([
-            description: "Removes the package from CQ. Does not fail if the package was not on" +
+            description: "Removes the package from CQ. Does not fail if the package was not on " +
                 "the server to begin with.",
             group      : 'CQ'
         ], 'remove')

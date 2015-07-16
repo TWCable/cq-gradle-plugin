@@ -19,6 +19,8 @@ buildscript {
 }
 ```
 
+Built against **Gradle 2.2.1**
+
 [ ![Download](https://api.bintray.com/packages/twcable/aem/cq-gradle-plugins/images/download.svg) ](https://bintray.com/twcable/aem/cq-gradle-plugins/_latestVersion)
 
 # Plugins #

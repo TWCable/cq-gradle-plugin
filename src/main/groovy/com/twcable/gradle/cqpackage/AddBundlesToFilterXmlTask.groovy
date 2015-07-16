@@ -66,6 +66,7 @@ class AddBundlesToFilterXmlTask extends DefaultTask {
     Reader getFilterXmlReader() {
         if (_filterXmlReader == null) {
             def srcFile = ((Project)project).file('src/main/content/META-INF/vault/filter.xml')
+            log.info("Reading ${srcFile}")
             _filterXmlReader = new FileReader(srcFile)
         }
         return _filterXmlReader
@@ -80,7 +81,10 @@ class AddBundlesToFilterXmlTask extends DefaultTask {
     Writer getFilterXmlWriter() {
         if (_filterXmlWriter == null) {
             def xmlFilename = "${project.buildDir}/tmp/filter.xml"
-            _filterXmlWriter = new FileWriter(xmlFilename)
+            File xmlFile = new File(xmlFilename)
+            xmlFile.getParentFile().mkdirs()
+            log.info("Writing to ${xmlFilename}")
+            _filterXmlWriter = new FileWriter(xmlFile)
         }
         return _filterXmlWriter
     }
@@ -171,6 +175,7 @@ class AddBundlesToFilterXmlTask extends DefaultTask {
 
 
     private static void writeReader(Reader xmlReader, Writer xmlWriter) {
+        log.info("Writing new XML")
         IOUtils.copy(xmlReader, xmlWriter)
         xmlWriter.flush()
     }
@@ -178,6 +183,7 @@ class AddBundlesToFilterXmlTask extends DefaultTask {
 
     @TypeChecked(TypeCheckingMode.SKIP)
     private static Node removeOldFilterNode(List filters, String bundleInstallRoot) {
+        log.info("Removing old bundle install filter node")
         // remove the bundle install root node if it exists
         Node oldFilterNode = filters.find { it.@root == bundleInstallRoot } as Node
         filters.remove(oldFilterNode)
@@ -212,7 +218,7 @@ class AddBundlesToFilterXmlTask extends DefaultTask {
 
 
         @SuppressWarnings("UnnecessaryQualifiedReference")
-        private static FilterDefinition create(Project project, Collection<String> jarFiles) {
+        static FilterDefinition create(Project project, Collection<String> jarFiles) {
             CqPackageConfiguration packageConfiguration = project.extensions.findByType(CqPackageConfiguration)
 
             String bundleInstallRoot = packageConfiguration.bundleInstallRoot

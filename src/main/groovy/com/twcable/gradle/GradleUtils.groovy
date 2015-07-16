@@ -31,11 +31,13 @@ class GradleUtils {
         if (conf != null) return conf
 
         def confName = confClass.getDeclaredField("NAME").get(null) as String
+        project.logger.debug "Creating extension \"${confName}\" with ${confClass.name} with ${args}"
         return project.extensions.create(confName, confClass, args)
     }
 
 
     @TypeChecked(TypeCheckingMode.SKIP)
+    @SuppressWarnings("GroovyUnusedDeclaration")
     public static void taskDependencyGraph(Project project, Collection<Task> theTasks = null) {
         // TODO: Tie into the "Reporting" infrastructure of Gradle
         StringBuilder sb = new StringBuilder("digraph Compile {\n")
