@@ -38,8 +38,6 @@ class FilterXmlWriterBuilder {
     private Writer outWriter
     private File outFile
     private Configuration configuration
-    private boolean includeProjectBundles = true
-    private boolean includeNonProjectBundles = true
     private String bundleInstallRoot
 
     /**
@@ -47,9 +45,9 @@ class FilterXmlWriterBuilder {
      * Only used if another property needs to compute a default value.
      */
     @Nonnull
-    FilterXmlWriterBuilder project(Project project) {
+    FilterXmlWriterBuilder(Project project) {
+        if (project == null) throw new IllegalArgumentException("project == null")
         this.project = project
-        return this
     }
 
     /**
@@ -59,26 +57,6 @@ class FilterXmlWriterBuilder {
     @Nonnull
     FilterXmlWriterBuilder configuration(Configuration configuration) {
         this.configuration = configuration
-        return this
-    }
-
-    /**
-     * Should the filter.xml include bundles that are project-dependencies?
-     * Defaults to true.
-     */
-    @Nonnull
-    FilterXmlWriterBuilder includeProjectBundles(boolean includeProjectBundles) {
-        this.includeProjectBundles = includeProjectBundles
-        return this
-    }
-
-    /**
-     * Should the filter.xml include bundles that are not project-dependencies?
-     * Defaults to true.
-     */
-    @Nonnull
-    FilterXmlWriterBuilder includeNonProjectBundles(boolean includeNonProjectBundles) {
-        this.includeNonProjectBundles = includeNonProjectBundles
         return this
     }
 
@@ -150,7 +128,7 @@ class FilterXmlWriterBuilder {
         ensureConfiguration()
         ensureBundleInstallRoot()
 
-        def filterDefinition = createFilterDescription(configuration)
+        def filterDefinition = createFilterDescription()
 
         return new FilterXmlWriter(this.inReader, filterDefinition, this.bundleInstallRoot, this.outWriter)
     }
@@ -158,24 +136,14 @@ class FilterXmlWriterBuilder {
 
     private void ensureBundleInstallRoot() {
         if (bundleInstallRoot == null) {
-            if (project != null) {
-                bundleInstallRoot = project.tasks.withType(CreatePackageTask).first().bundleInstallRoot
-            }
-            else {
-                throw new IllegalStateException("Could not find bundle install root: Missing Project")
-            }
+            bundleInstallRoot = project.tasks.withType(CreatePackageTask).first().bundleInstallRoot
         }
     }
 
 
     private void ensureConfiguration() {
         if (configuration == null) {
-            if (project != null) {
-                configuration = CqPackagePlugin.cqPackageDependencies(project)
-            }
-            else {
-                throw new IllegalStateException("Could not read configuration: Missing Project")
-            }
+            configuration = CqPackagePlugin.cqPackageDependencies(project)
         }
     }
 
@@ -184,12 +152,7 @@ class FilterXmlWriterBuilder {
         if (this.outWriter != null) return
 
         if (outFile == null) {
-            if (project != null) {
-                outFile = new File(project.buildDir, "/tmp/filter.xml").canonicalFile
-            }
-            else {
-                throw new IllegalStateException("Could not create outFile: Missing Project")
-            }
+            outFile = new File(project.buildDir, "/tmp/filter.xml").canonicalFile
         }
 
         if (!outFile.exists()) {
@@ -207,12 +170,7 @@ class FilterXmlWriterBuilder {
         if (this.inReader != null) return
 
         if (inFile == null) {
-            if (project != null) {
-                inFile = project.file('src/main/content/META-INF/vault/filter.xml')
-            }
-            else {
-                throw new IllegalStateException("Could not read inFile: Missing Project")
-            }
+            inFile = project.file('src/main/content/META-INF/vault/filter.xml')
         }
         inFile = inFile.canonicalFile
 
@@ -227,21 +185,9 @@ class FilterXmlWriterBuilder {
 
 
     @Nonnull
-    private FilterDefinition createFilterDescription(Configuration configuration) {
-        FilterDefinition filterDefinition
-        if (includeProjectBundles) {
-            if (includeNonProjectBundles)
-                filterDefinition = FilterDefinition.createAllBundles(project, configuration)
-            else
-                filterDefinition = FilterDefinition.createProjectBundles(project, configuration)
-        }
-        else { // includeProjectBundles == false
-            if (includeNonProjectBundles)
-                filterDefinition = FilterDefinition.createNonProjectBundles(configuration)
-            else
-                filterDefinition = FilterDefinition.createNoBundles()
-        }
-        return filterDefinition
+    private FilterDefinition createFilterDescription() {
+        def bundleFiles = CreatePackageTask.from(project).bundleFiles
+        return FilterDefinition.create(bundleFiles)
     }
 
 }

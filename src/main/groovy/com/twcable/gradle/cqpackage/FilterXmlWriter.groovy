@@ -19,13 +19,14 @@ package com.twcable.gradle.cqpackage
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.apache.commons.io.IOUtils
+import org.gradle.api.Project
 
 import javax.annotation.Nonnull
 
 /**
  * Provides a way to (re)write the filter.xml file to include the bundles in the package.
  *
- * @see FilterXmlWriter#builder()
+ * @see FilterXmlWriter#builder(Project)
  * @see FilterXmlWriter#run()
  */
 @Slf4j
@@ -49,8 +50,8 @@ class FilterXmlWriter {
      * Returns a {@link FilterXmlWriterBuilder} for constructing an instance of FilterXmlWriter.
      */
     @Nonnull
-    static FilterXmlWriterBuilder builder() {
-        return new FilterXmlWriterBuilder()
+    static FilterXmlWriterBuilder builder(Project project) {
+        return new FilterXmlWriterBuilder(project)
     }
 
     /**

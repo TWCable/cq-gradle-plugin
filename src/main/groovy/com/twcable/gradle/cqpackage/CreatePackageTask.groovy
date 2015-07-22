@@ -17,6 +17,7 @@
 package com.twcable.gradle.cqpackage
 
 import groovy.transform.TypeChecked
+import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.CopySpec
 import org.gradle.api.tasks.InputDirectory
@@ -26,17 +27,19 @@ import org.gradle.api.tasks.bundling.Zip
 import javax.annotation.Nonnull
 
 import static com.twcable.gradle.cqpackage.CqPackageUtils.allBundleFiles
+import static com.twcable.gradle.cqpackage.CqPackageUtils.allProjectBundleJarFiles
 import static com.twcable.gradle.cqpackage.CqPackageUtils.nonProjectDependencyBundleFiles
-import static com.twcable.gradle.cqpackage.CqPackageUtils.projectBundleJarFiles
 import static com.twcable.gradle.cqpackage.CreatePackageTask.CopyBundlesMode.ALL
 import static com.twcable.gradle.cqpackage.CreatePackageTask.CopyBundlesMode.NONE
 import static com.twcable.gradle.cqpackage.CreatePackageTask.CopyBundlesMode.NON_PROJECT_ONLY
 import static com.twcable.gradle.cqpackage.CreatePackageTask.CopyBundlesMode.PROJECT_ONLY
+import static java.util.Collections.EMPTY_LIST
 
 @TypeChecked
 class CreatePackageTask extends Zip {
     private String _bundleInstallRoot = '/apps/install'
     private File _contentSrc
+    private Configuration _configuration
 
     /**
      * Mutable collection of exclusions to apply to copying files from {@link #getContentSrc()}.
@@ -47,12 +50,6 @@ class CreatePackageTask extends Zip {
 
     CopyBundlesMode copyBundlesMode = ALL
 
-    /**
-     * The Configuration to use when determining what bundles to put in the package.
-     * @see #addAllBundles()
-     */
-    Configuration configuration
-
 
     CreatePackageTask() {
         super()
@@ -60,7 +57,7 @@ class CreatePackageTask extends Zip {
         // AbstractTask() guarantees that this.project has been set
 
         setDefaults()
-        initialize()
+        addVaultFilter()
     }
 
 
@@ -86,8 +83,13 @@ class CreatePackageTask extends Zip {
     }
 
 
-    private void initialize() {
-        addVaultFilter()
+    @Nonnull
+    static CreatePackageTask from(@Nonnull Project project) {
+        if (project == null) throw new IllegalArgumentException("project == null")
+        def tasks = project.tasks.withType(CreatePackageTask)
+        if (tasks == null || tasks.isEmpty()) throw new IllegalArgumentException("${project} does not have a ${CreatePackageTask.name}")
+        if (tasks.size() > 1) throw new IllegalArgumentException("${project} has more than one ${CreatePackageTask.name}")
+        return tasks.first()
     }
 
     /**
@@ -171,10 +173,19 @@ class CreatePackageTask extends Zip {
     }
 
 
+    /**
+     * The Configuration to use when determining what bundles to put in the package.
+     * @see #addAllBundles()
+     */
     Configuration getConfiguration() {
-        if (configuration != null) return configuration
+        if (_configuration != null) return _configuration
 
         return CqPackagePlugin.cqPackageDependencies(project)
+    }
+
+
+    void setConfiguration(Configuration conf) {
+        this._configuration = conf
     }
 
 
@@ -211,19 +222,22 @@ class CreatePackageTask extends Zip {
     }
 
 
+    Collection<File> getBundleFiles() {
+        switch (copyBundlesMode) {
+            case ALL: return allBundleFiles(project, configuration)
+            case PROJECT_ONLY: return allProjectBundleJarFiles(project, configuration)
+            case NON_PROJECT_ONLY: return nonProjectDependencyBundleFiles(configuration)
+            case NONE: return EMPTY_LIST
+            default: throw new IllegalStateException("Unknown CopyBundlesMode: ${copyBundlesMode}")
+        }
+    }
+
+
     private void addBundles(@Nonnull String bundleInstallRoot) {
         if (copyBundlesMode == NONE) return // nothing to do
 
         this.into("jcr_root${bundleInstallRoot}") { CopySpec spec ->
-            final Collection<File> files
-            switch (copyBundlesMode) {
-                case ALL: files = allBundleFiles(project, configuration); break
-                case PROJECT_ONLY: files = projectBundleJarFiles(project, configuration); break
-                case NON_PROJECT_ONLY: files = nonProjectDependencyBundleFiles(configuration); break
-                case NONE: return // should be impossible...
-                default: throw new IllegalStateException("Unknown CopyBundlesMode: ${copyBundlesMode}")
-            }
-
+            Collection<File> files = getBundleFiles()
             logger.info "Adding bundles: ${files}"
             spec.from files
         }

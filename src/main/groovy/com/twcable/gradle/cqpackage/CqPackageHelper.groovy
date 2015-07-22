@@ -227,7 +227,7 @@ class CqPackageHelper {
             return new File(packageProperty)
         }
 
-        def file = project.tasks.withType(CreatePackageTask).first().archivePath
+        def file = CreatePackageTask.from(project).archivePath
         project.logger.info("No remote package passed in. Using createPackage zip: ${file}")
         return file
     }
@@ -278,17 +278,6 @@ class CqPackageHelper {
         }
         else {
             throw new GradleException("Could not upload '${sourceFile}': ${msg}")
-        }
-    }
-
-
-    void verifyOsgiArtifacts(Configuration configuration) {
-        final resolvedConfiguration = configuration.resolvedConfiguration
-        resolvedConfiguration.resolvedArtifacts.each { ra ->
-            final file = ra.file
-            if (!isOsgiFile(file)) {
-                println "\n${ra.moduleVersion.id} is not an OSGi file"
-            }
         }
     }
 
@@ -472,7 +461,7 @@ class CqPackageHelper {
      * @return null if the file is not an OSGi bundle
      */
     @Nullable
-    String getSymbolicName(File file) {
+    static String getSymbolicName(File file) {
         try {
             JarFile jar = new JarFile(file)
             Manifest manifest = jar.manifest
@@ -487,7 +476,7 @@ class CqPackageHelper {
     /**
      * Does the given JAR file have basic OSGi metadata? (Specifically "Bundle-SymbolicName")
      */
-    boolean isOsgiFile(File file) {
+    static boolean isOsgiFile(File file) {
         return getSymbolicName(file) != null
     }
 

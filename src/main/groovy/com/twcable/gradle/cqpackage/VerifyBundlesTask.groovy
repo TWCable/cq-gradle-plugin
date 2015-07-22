@@ -20,32 +20,24 @@ import groovy.transform.CompileStatic
 import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.TaskAction
 
-/**
- * A task that will (re)write the filter.xml file with bundle files.
- *
- * @see FilterXmlWriter
- */
-@CompileStatic
-class AddBundlesToFilterXmlTask extends DefaultTask {
-    /**
-     * Where to find the "source" XML that will be modified with the bundles.
-     */
-    Reader filterXmlReader
+import static com.twcable.gradle.cqpackage.CqPackageHelper.isOsgiFile
 
-    /**
-     * Where the modified XML will be written.
-     */
-    Writer filterXmlWriter
+@CompileStatic
+class VerifyBundlesTask extends DefaultTask {
+
+    Collection<File> nonOsgiFiles() {
+        def createProjectTask = CreatePackageTask.from(project)
+        def bundleFiles = createProjectTask.bundleFiles
+        return bundleFiles.findAll { !isOsgiFile(it) }
+    }
 
 
     @TaskAction
     @SuppressWarnings("GroovyUnusedDeclaration")
-    void writeFile() {
-        def xmlWriter = FilterXmlWriter.builder(project).
-            inReader(filterXmlReader). // if not set, will use default
-            outWriter(filterXmlWriter). // if not set, will use default
-            build()
-        xmlWriter.run()
+    void verify() {
+        for (File file : nonOsgiFiles()) {
+            logger.lifecycle "\n${file.name} is not an OSGi file"
+        }
     }
 
 }

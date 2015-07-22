@@ -38,6 +38,7 @@ class CreatePackageTaskSpec extends Specification {
 
     def setup() {
         project = CqPackageTestUtils.createCqPackageProject()
+        project.verifyBundles.enabled = false
 
         def subproject1 = createSubProject(project, 'subproject1', true)
         addProjectToCompile(project, subproject1)

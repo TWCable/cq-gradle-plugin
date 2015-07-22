@@ -162,16 +162,11 @@ class CqPackagePlugin implements Plugin<Project> {
 
 
     private Task verifyBundles(Project project) {
-        return project.tasks.create('verifyBundles') { Task task ->
+        return project.tasks.create('verifyBundles', VerifyBundlesTask) { Task task ->
             task.description = "Checks all the JARs that are included in the package to make sure they are " +
                 "installed and in an ACTIVE state and gives a report of any that are not. This task polls in the " +
                 "case the bundles are newly installed."
             task.group = 'CQ'
-            final packageDeps = cqPackageDependencies(project)
-            task.doLast {
-                getCqPackageHelper(project).verifyOsgiArtifacts(packageDeps)
-            }
-            task.dependsOn packageDeps
         }
     }
 

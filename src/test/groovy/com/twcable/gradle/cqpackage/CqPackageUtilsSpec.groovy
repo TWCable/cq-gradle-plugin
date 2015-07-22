@@ -40,7 +40,7 @@ class CqPackageUtilsSpec extends Specification {
         addProjectToCompile(rootProject, subproject3)
 
         when:
-        def files = CqPackageUtils.projectBundleJarFiles(rootProject, rootProject.configurations.cq_package)
+        def files = CqPackageUtils.allProjectBundleJarFiles(rootProject, rootProject.configurations.cq_package)
         def fileNames = files.collect { it.name } as Set
 
         then:

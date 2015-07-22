@@ -16,8 +16,14 @@
 
 package com.twcable.gradle.cqpackage
 
+import com.twcable.gradle.cqpackage.CreatePackageTask.CopyBundlesMode
 import org.gradle.api.Project
+import org.hamcrest.Matcher
+import org.xmlunit.diff.DefaultNodeMatcher
+import org.xmlunit.diff.ElementSelectors
+import org.xmlunit.matchers.CompareMatcher
 import spock.lang.Specification
+import spock.lang.Subject
 import spock.lang.Unroll
 
 import static com.twcable.gradle.cqpackage.CqPackageTestUtils.addCompileDependency
@@ -25,14 +31,20 @@ import static com.twcable.gradle.cqpackage.CqPackageTestUtils.addProjectToCompil
 import static com.twcable.gradle.cqpackage.CqPackageTestUtils.createCqPackageProject
 import static com.twcable.gradle.cqpackage.CqPackageTestUtils.createSubProject
 import static com.twcable.gradle.cqpackage.CqPackageTestUtils.xml
-import static com.twcable.gradle.cqpackage.CqPackageTestUtils.xmlString
+import static com.twcable.gradle.cqpackage.CreatePackageTask.CopyBundlesMode.ALL
+import static com.twcable.gradle.cqpackage.CreatePackageTask.CopyBundlesMode.NONE
+import static com.twcable.gradle.cqpackage.CreatePackageTask.CopyBundlesMode.NON_PROJECT_ONLY
+import static com.twcable.gradle.cqpackage.CreatePackageTask.CopyBundlesMode.PROJECT_ONLY
+import static spock.util.matcher.HamcrestSupport.expect
 
+@Subject(FilterXmlWriter)
 class FilterXmlWriterSpec extends Specification {
 
     @Unroll
-    def "check filter XML processing with jars using #before and #bundleRoot"() {
+    def "check filter XML processing with jars using #bundleRoot"() {
         given:
         Project rootProject = createCqPackageProject('2.3.4', bundleRoot)
+        rootProject.verifyBundles.enabled = false
 
         def subproject1 = createSubProject(rootProject, 'subproject1', true)
         addProjectToCompile(rootProject, subproject1)
@@ -44,10 +56,10 @@ class FilterXmlWriterSpec extends Specification {
         addProjectToCompile(rootProject, subproject3)
 
         when:
-        def processed = outputXml(rootProject, xml(before), ['groovy-all-2.1.6.jar'], true, true)
+        def processed = outputXml(rootProject, xml(before), ['groovy-all-2.1.6.jar'], ALL)
 
         then:
-        xmlString(processed) == xml(after)
+        expect processed, xmlEquals(xml(after))
 
         where:
         before << [
@@ -76,9 +88,9 @@ class FilterXmlWriterSpec extends Specification {
                 workspaceFilter(version: "1.0") {
                     filter(root: "/apps/formbuilder")
                     filter(root: "/etc/clientlibs/formbuilder")
-                    filter(root: "/apps/formbuilder/install/groovy-all-2.1.6.jar")
                     filter(root: "/apps/formbuilder/install/subproject1-2.3.4.jar")
                     filter(root: "/apps/formbuilder/install/subproject2-2.3.4.jar")
+                    filter(root: "/apps/formbuilder/install/groovy-all-2.1.6.jar")
                 }
             },
             {
@@ -112,6 +124,7 @@ class FilterXmlWriterSpec extends Specification {
     def "does not include subprojects that are not dependencies"() {
         given:
         Project rootProject = createCqPackageProject('2.3.4', '/apps/install')
+        rootProject.verifyBundles.enabled = false
 
         def subproject1 = createSubProject(rootProject, 'subproject1', true)
         addProjectToCompile(rootProject, subproject1)
@@ -132,10 +145,10 @@ class FilterXmlWriterSpec extends Specification {
             }
 
         when:
-        def processed = outputXml(rootProject, xml(before), ['groovy-all-2.1.6.jar'], true, true)
+        def processed = outputXml(rootProject, xml(before), ['groovy-all-2.1.6.jar'], ALL)
 
         then:
-        xmlString(processed) == xml(after)
+        expect processed, xmlEquals(xml(after))
     }
 
 
@@ -156,10 +169,10 @@ class FilterXmlWriterSpec extends Specification {
             }
 
         when:
-        def processed = outputXml(project, xml(before), ['groovy-all-2.1.6.jar'], false, true)
+        def processed = outputXml(project, xml(before), ['groovy-all-2.1.6.jar'], PROJECT_ONLY)
 
         then:
-        xmlString(processed) == xml(after)
+        expect processed, xmlEquals(xml(after))
     }
 
 
@@ -183,10 +196,10 @@ class FilterXmlWriterSpec extends Specification {
             }
 
         when:
-        def processed = outputXml(project, xml(before), ['groovy-all-2.1.6.jar'], true, false)
+        def processed = outputXml(project, xml(before), ['groovy-all-2.1.6.jar'], NON_PROJECT_ONLY)
 
         then:
-        xmlString(processed) == xml(after)
+        expect processed, xmlEquals(xml(after))
     }
 
 
@@ -209,15 +222,16 @@ class FilterXmlWriterSpec extends Specification {
             }
 
         when:
-        def processed = outputXml(project, xml(before), ['groovy-all-2.1.6.jar'], false, false)
+        def processed = outputXml(project, xml(before), ['groovy-all-2.1.6.jar'], NONE)
 
         then:
-        xmlString(processed) == xml(after)
+        expect processed, xmlEquals(xml(after))
     }
 
 
     static Project simpleProject() {
         Project rootProject = createCqPackageProject('2.3.4', '/apps/install')
+        rootProject.verifyBundles.enabled = false
 
         def subproject1 = createSubProject(rootProject, 'subproject1', true)
         addProjectToCompile(rootProject, subproject1)
@@ -225,18 +239,22 @@ class FilterXmlWriterSpec extends Specification {
     }
 
 
+    static Matcher xmlEquals(String after) {
+        CompareMatcher.isSimilarTo(after).
+            withNodeMatcher(new DefaultNodeMatcher(ElementSelectors.byNameAndAllAttributes))
+    }
+
+
     static String outputXml(Project project, String xml, Collection jarNames,
-                            boolean nonProjBundles, boolean projBundles) {
+                            CopyBundlesMode copyBundlesMode) {
         jarNames.each { addCompileDependency(project, new File(it as String)) }
 
         StringWriter writer = new StringWriter()
+        CreatePackageTask.from(project).copyBundlesMode = copyBundlesMode
 
-        FilterXmlWriter.builder().
-            project(project).
+        FilterXmlWriter.builder(project).
             inReader(new StringReader(xml)).
             outWriter(writer).
-            includeNonProjectBundles(nonProjBundles).
-            includeProjectBundles(projBundles).
             build().
             run()
 

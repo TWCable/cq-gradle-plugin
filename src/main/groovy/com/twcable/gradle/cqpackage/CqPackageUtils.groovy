@@ -41,7 +41,7 @@ final class CqPackageUtils {
      * the configuration that use the "osgi" plugin.
      */
     @Nonnull
-    static Collection<File> projectBundleJarFiles(@Nonnull Project project, @Nonnull Configuration configuration) {
+    static Collection<File> allProjectBundleJarFiles(@Nonnull Project project, @Nonnull Configuration configuration) {
         if (configuration == null) throw new IllegalArgumentException("configuration == null")
 
         Collection<ProjectDependency> allOsgiProjects = projectDependenciesForConfiguration(configuration).
@@ -200,14 +200,14 @@ final class CqPackageUtils {
     /**
      * Returns all files for all bundle dependencies in the configuration.
      * Effectively the union of {@link #nonProjectDependencyBundleFiles(Configuration)}
-     * and {@link #projectBundleJarFiles(Project, Configuration)}.
+     * and {@link #allProjectBundleJarFiles(Project, Configuration)}.
      */
     @Nonnull
     static Collection<File> allBundleFiles(@Nonnull Project project, @Nonnull Configuration configuration) {
         if (configuration == null) throw new IllegalArgumentException("configuration == null")
         if (project == null) throw new IllegalArgumentException("project == null")
 
-        Collection<File> allProj = projectBundleJarFiles(project, configuration)
+        Collection<File> allProj = allProjectBundleJarFiles(project, configuration)
         Collection<File> allNonProj = nonProjectDependencyBundleFiles(configuration)
 
         return (allProj + allNonProj) as Set<File> // de-dupe the files

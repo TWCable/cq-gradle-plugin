@@ -23,7 +23,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 
 import static com.twcable.gradle.cqpackage.CqPackageUtils.nonProjectDependencyBundleFiles
-import static com.twcable.gradle.cqpackage.CqPackageUtils.projectBundleJarFiles
+import static com.twcable.gradle.cqpackage.CqPackageUtils.allProjectBundleJarFiles
 
 @Slf4j
 @PackageScope
@@ -34,6 +34,11 @@ class FilterDefinition {
 
     private FilterDefinition(Collection<String> jarNames) {
         this.jarNames = jarNames
+    }
+
+
+    static FilterDefinition create(Collection<File> bundleFiles) {
+        return new FilterDefinition(bundleFiles.collect { it.name })
     }
 
 
@@ -73,7 +78,7 @@ class FilterDefinition {
 
 
     private static Collection<String> projectBundleNames(Project project, Configuration configuration) {
-        def allProjectJarNames = projectBundleJarFiles(project, configuration).
+        def allProjectJarNames = allProjectBundleJarFiles(project, configuration).
             collect { it.name }
 
         log.info "Project Bundles: ${allProjectJarNames.sort()}"

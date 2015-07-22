@@ -8,6 +8,11 @@ plugins {
 
 repositories {
     jcenter()
+
+    // needed for XMLUnit 2
+    maven {
+        url "https://oss.sonatype.org/content/repositories/snapshots"
+    }
 }
 
 version = new Version(version as String)
@@ -41,6 +46,8 @@ dependencies {
     }
 
     testCompile "cglib:cglib-nodep:2.2"
+    testCompile "org.xmlunit:xmlunit-core:2.0.0-SNAPSHOT"
+    testCompile "org.xmlunit:xmlunit-matchers:2.0.0-SNAPSHOT"
 }
 
 sourceCompatibility = '1.7'
