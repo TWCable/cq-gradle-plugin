@@ -1,5 +1,9 @@
 # RELEASE NOTES
 
+## 3.0.1
+
+* Consolidated determining list of bundles between CQ Package tasks ( GH-22 )
+
 ## 3.0.0
 
 * The deprecated `native_cq_package` configuration has been removed ( GH-19 )
