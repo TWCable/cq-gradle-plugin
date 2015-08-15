@@ -142,6 +142,9 @@ Inclusion of bundles to install::
 Variable substitution of `META-INF/vault/definition/.content.xml` and `META-INF/vault/properties.xml`::
   The source files will be treated as templates with the Project properties passed in for substitution. Particularly
   useful for things like `${version}`
+  
+  *NOTE:* There's currently a dependency for the `install` task between the project name (`project.name`) and the
+  `"name"` values in these metadata files. See issue #24.
 
 Explicit inclusion of bundles in `filter.xml`::
   Each of the bundles installed by the package receive their own `<filter/>` line in `filter.xml` to ensure that
