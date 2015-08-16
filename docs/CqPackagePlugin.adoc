@@ -28,7 +28,7 @@ reinstall::
   Convenience task that simple depends on `clean`, `uninstall`, `remove`, `install`, then `verifyBundles`.
 
 installPackage::
-  Installs the CQ Package
+  Installs the CQ Package that has been uploaded. **Note** Uses the name of the package. See below.
 
 validateBundles::
   Checks all the JARs that are included in the package to make sure they are installed and in an

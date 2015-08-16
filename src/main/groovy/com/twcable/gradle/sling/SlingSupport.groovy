@@ -204,6 +204,7 @@ class SlingSupport {
     HttpResponse doGet(URI url, SimpleHttpClient httpClient) {
         if (!serverConf.active) return new HttpResponse(HTTP_CLIENT_TIMEOUT, "${serverConf.name} is not responding")
         if (url == null) return new HttpResponse(HTTP_NOT_FOUND, 'Missing URL')
+        log.info "GET ${url}"
         HttpGet get = new HttpGet(url)
         def resp = httpClient.execute(get)
         if (resp.code == HTTP_CLIENT_TIMEOUT) serverConf.active = false

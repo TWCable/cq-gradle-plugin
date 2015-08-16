@@ -20,6 +20,7 @@ import groovy.transform.TypeChecked
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.file.CopySpec
+import org.gradle.api.internal.file.copy.DefaultCopySpec
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.bundling.Zip
@@ -80,6 +81,8 @@ class CreatePackageTask extends Zip {
             'jcr_root/var/**',
             'SLING-INF/**',
         ]
+
+        setContentSrc(project.file("src/main/content"))
     }
 
 
@@ -140,6 +143,10 @@ class CreatePackageTask extends Zip {
      */
     @SuppressWarnings("GroovyUnusedDeclaration")
     void setContentSrc(File contentSrc) {
+        if (_contentSrc != null)
+            ((DefaultCopySpec)getMainSpec()).getSourcePaths().remove(this._contentSrc)
+
+        ((DefaultCopySpec)getMainSpec()).getSourcePaths().add(contentSrc)
         this._contentSrc = contentSrc
     }
 
@@ -149,15 +156,13 @@ class CreatePackageTask extends Zip {
      */
     @InputDirectory
     File getContentSrc() {
-        return _contentSrc ?: project.file("src/main/content")
+        return _contentSrc
     }
 
 
     @Override
     @TaskAction
     protected void copy() {
-        this.from(contentSrc)
-
         // delaying until now to set up these sections because they need the "final" versions
         // of some of the properties of this task
         addVaultDefinition(contentSrc)
@@ -171,7 +176,6 @@ class CreatePackageTask extends Zip {
     static enum CopyBundlesMode {
         ALL, PROJECT_ONLY, NON_PROJECT_ONLY, NONE
     }
-
 
     /**
      * The Configuration to use when determining what bundles to put in the package.

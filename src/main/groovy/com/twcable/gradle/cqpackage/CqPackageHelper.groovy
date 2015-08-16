@@ -195,11 +195,16 @@ class CqPackageHelper {
     Map getPackageInfo(SlingServerConfiguration serverConfig) {
         def packagesInfo = listPackages(serverConfig)
         if (packagesInfo != null) {
-            return packagesInfo.results.find { Map packageInfo ->
+            def packageMap = packagesInfo.results.find { Map packageInfo ->
                 packageInfo.name == packageName
             } as Map
+            if (packageMap == null) {
+                logger.info "Could not find ${packageName} in ${packagesInfo.results.collect { Map pi -> pi.name }}"
+            }
+            return packageMap
         }
         else {
+            logger.warn "Did not get a list of packages on ${serverConfig.name}"
             return null
         }
     }
