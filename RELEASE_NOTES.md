@@ -1,5 +1,9 @@
 # RELEASE NOTES
 
+## 3.0.2
+
+* Made createPackage.contentSrc more flexible ( GH-26 )
+
 ## 3.0.1
 
 * Consolidated determining list of bundles between CQ Package tasks ( GH-22 )
