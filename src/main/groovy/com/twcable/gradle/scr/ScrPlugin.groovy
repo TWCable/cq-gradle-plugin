@@ -19,6 +19,7 @@ package com.twcable.gradle.scr
 import groovy.transform.TypeChecked
 import groovy.transform.TypeCheckingMode
 import groovy.util.slurpersupport.NodeChild
+import org.apache.felix.scrplugin.ant.SCRDescriptorTask
 import org.apache.tools.ant.types.Path
 import org.gradle.api.InvalidUserDataException
 import org.gradle.api.Plugin
@@ -72,8 +73,8 @@ class ScrPlugin implements Plugin<Project> {
 
         project.logger.info "Running SCR for ${classesDir}"
         if (classesDir.exists()) {
-            final task = new ClassSCRDescriptorTask(srcdir: classesDir, destdir: classesDir,
-                classpath: new Path(antProject, runtimePath), strictMode: true, project: antProject)
+            final task = new SCRDescriptorTask(srcdir: classesDir, destdir: classesDir,
+                classpath: new Path(antProject, runtimePath), strictMode: false, project: antProject, scanClasses: true)
             task.execute()
 
             addToManifest(project, classesDir)
@@ -83,38 +84,31 @@ class ScrPlugin implements Plugin<Project> {
 
     void addToManifest(Project project, File resourcesDir) throws InvalidUserDataException {
         final osgiInfDir = new File(resourcesDir, 'OSGI-INF')
-        final scFile = new File(osgiInfDir, 'serviceComponents.xml')
-        if (scFile.exists()) {
-            project.logger.info "Created ${scFile}"
+
+        def files = osgiInfDir.listFiles({ File dir, String name ->
+            name.endsWith(".xml")
+        } as FilenameFilter) as List<File>
+
+        if (!files.isEmpty()) {
+            def relFiles = files.collect { file -> 'OSGI-INF/' + file.name }
+            project.logger.info "Created ${relFiles}"
             final jar = (Jar)project.tasks.getByName('jar')
             final osgiManifest = (OsgiManifest)jar.manifest
-            osgiManifest.instruction('Service-Component', 'OSGI-INF/serviceComponents.xml')
-            validateReferences(project, scFile)
+            osgiManifest.instruction('Service-Component', relFiles.join(','))
+            validateReferences(project, files)
         }
         else {
-            project.logger.warn "${scFile} was not created"
+            project.logger.warn "${osgiInfDir}/*.xml was not created"
         }
-    }
-
-
-    private Collection<Map> allComponents(File scFile) {
-        return new XmlSlurper().parse(scFile).children().findAll { NodeChild node ->
-            node.name() == 'component'
-        } as Collection<Map>
     }
 
 
     @TypeChecked(TypeCheckingMode.SKIP)
-    private void validateReferences(Project project, File scFile) {
-        def allComponents = allComponents(scFile)
+    private void validateReferences(Project project, List<File> files) {
         def errorMessage = ""
 
-        if (!allComponents) {
-            project.logger.warn "No components found in ${scFile}."
-            return
-        }
-
-        for (component in allComponents) {
+        for (file in files) {
+            def component = new XmlSlurper().parse(file)
             for (references in component.reference) {
                 errorMessage = generateErrorMsg(errorMessage, references.@interface.text(), component.@name.text(),
                     loadClassPaths(project))

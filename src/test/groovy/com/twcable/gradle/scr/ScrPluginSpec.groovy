@@ -60,15 +60,14 @@ class ScrPluginSpec extends Specification {
 
 
     def "check serviceComponents components"() {
-        when:
+        setup:
         setupProjectOne()
-        final serviceComponentsFile = file('/scr/proj/build/classes/main/OSGI-INF/serviceComponents.xml')
-        final xml = new XmlSlurper().parse(serviceComponentsFile).declareNamespace(scr: 'http://www.osgi.org/xmlns/scr/v1.0.0')
 
-        def scrComponents = xml.'scr:component'
+        when:
+        final simpleServiceFile = file('/scr/proj/build/classes/main/OSGI-INF/testpkg.SimpleService.xml')
+        final simpleService = new XmlSlurper().parse(simpleServiceFile).declareNamespace(scr: 'http://www.osgi.org/xmlns/scr/v1.0.0')
 
         then:
-        final simpleService = scrComponents.grep { it.@name == 'testpkg.SimpleService' }[0]
         simpleService.@name == 'testpkg.SimpleService'
         simpleService.@immediate == true
         simpleService.service.provide.collect {
@@ -77,7 +76,11 @@ class ScrPluginSpec extends Specification {
         simpleService.property.collect { it.@name } as Set ==
             ['testProp', 'testProp2', 'process.label', 'service.pid', 'prop.on.constant'] as Set
 
-        final simpleServlet = scrComponents.grep { it.@name == 'testpkg.SimpleServlet' }[0]
+        when:
+        final simpleServletFile = file('/scr/proj/build/classes/main/OSGI-INF/testpkg.SimpleServlet.xml')
+        final simpleServlet = new XmlSlurper().parse(simpleServletFile).declareNamespace(scr: 'http://www.osgi.org/xmlns/scr/v1.0.0')
+
+        then:
         simpleServlet.@name == 'testpkg.SimpleServlet'
         simpleServlet.service.provide.collect { it.@interface } as Set == ['javax.servlet.Servlet'] as Set
         simpleServlet.property.collect { it.@name } as Set ==
@@ -88,7 +91,7 @@ class ScrPluginSpec extends Specification {
     def "check metatype components"() {
         when:
         setupProjectOne()
-        final metadataFile = file('/scr/proj/build/classes/main/OSGI-INF/metatype/metatype.xml')
+        final metadataFile = file('/scr/proj/build/classes/main/OSGI-INF/metatype/testpkg.SimpleService.xml')
         final metadata = new XmlSlurper().parse(metadataFile).declareNamespace(mt: 'http://www.osgi.org/xmlns/metatype/v1.0.0')
 
         then:
