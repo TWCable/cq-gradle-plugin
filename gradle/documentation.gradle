@@ -1,0 +1,27 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    //noinspection GroovyAssignabilityCheck
+    dependencies {
+        classpath "org.ajoberstar:gradle-git:$gradleGit_version"
+    }
+}
+
+apply plugin: org.ajoberstar.gradle.git.ghpages.GithubPagesPlugin
+
+githubPages {
+    repoUri = 'git@github.com:TWCable/cq-gradle-plugin.git'
+
+    pages {
+        from(javadoc.outputs.files) {
+            into 'docs/javadoc'
+        }
+        from(groovydoc.outputs.files) {
+            into 'docs/groovydoc'
+        }
+    }
+}
+
+publishGhPages.dependsOn javadoc, groovydoc

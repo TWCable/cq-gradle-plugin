@@ -1,0 +1,10 @@
+//noinspection GroovyAssignabilityCheck
+dependencies {
+    // hack to get the complete set of plugins, as well as "most" of the source
+    compile gradleApi() // hack to get the plugins
+    testCompile "org.codehaus.groovy:groovy-all:2.3.6"
+    testCompile "org.gradle:gradle-core:2.2"
+
+    // @Nonnull @Nullable etc annotations
+    compile "com.google.code.findbugs:jsr305:2.0.0"
+}

@@ -1,0 +1,9 @@
+def scr_version = '1.13.0'
+
+//noinspection GroovyAssignabilityCheck
+dependencies {
+    compile gradleApi()
+    compile "org.apache.felix:org.apache.felix.scr.generator:${scr_version}"
+    compile "org.apache.felix:org.apache.felix.scr.ant:${scr_version}"
+    compile "biz.aQute.bnd:biz.aQute.bndlib:3.0.0"
+}

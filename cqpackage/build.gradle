@@ -1,0 +1,23 @@
+//noinspection GroovyAssignabilityCheck
+dependencies {
+    // JCR file vault packaging
+    compile "org.apache.jackrabbit.vault:org.apache.jackrabbit.vault:3.1.18"
+    compile "org.apache.sling:org.apache.sling.jcr.jcr-wrapper:2.0.0"
+    compile "org.apache.jackrabbit:jackrabbit-spi-commons:2.10.0"
+
+    // @Nonnull @Nullable etc annotations
+    compile "com.google.code.findbugs:jsr305:2.0.0"
+
+    testCompile "org.spockframework:spock-core:1.0-groovy-2.3", {
+        exclude group: 'org.codehaus.groovy', module: 'groovy-all'
+        exclude group: 'org.hamcrest', module: 'hamcrest-core'
+    }
+
+    testCompile "cglib:cglib-nodep:2.2"
+    testCompile "org.xmlunit:xmlunit-core:2.0.0-SNAPSHOT"
+    testCompile "org.xmlunit:xmlunit-matchers:2.0.0-SNAPSHOT"
+
+    compile project(":sling")
+    compile project(":bundle")
+    compile project(":util")
+}
