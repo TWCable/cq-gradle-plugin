@@ -1,1 +1,9 @@
 rootProject.name = 'cq-gradle-plugins'
+
+include ':bundle'
+include ':bundlor'
+include ':cqpackage'
+include ':http'
+include ':scr'
+include ':sling'
+include ':util'

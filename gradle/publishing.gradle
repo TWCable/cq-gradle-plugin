@@ -1,0 +1,120 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    //noinspection GroovyAssignabilityCheck
+    dependencies {
+        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.2'
+        classpath 'org.eclipse.jgit:org.eclipse.jgit:4.1.0.201509280440-r'
+    }
+}
+
+apply plugin: 'maven-publish'
+apply plugin: com.jfrog.bintray.gradle.BintrayPlugin
+
+def gitConfig = new org.eclipse.jgit.storage.file.FileRepositoryBuilder().findGitDir().build().config
+def userEmail = gitConfig.getString('user', null, 'email')
+
+//noinspection GroovyAssignabilityCheck
+jar {
+    manifest {
+        attributes 'Implementation-Title': 'Gradle Docker plugin',
+            'Implementation-Version': version,
+            'Built-By': userEmail ?: 'moore.jim@gmail.com',
+            'Built-Date': new Date(),
+            'Built-JDK': System.getProperty('java.version') ?: '1.7',
+            'Built-Gradle': gradle.gradleVersion
+    }
+}
+
+//noinspection GroovyAssignabilityCheck
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifact sourcesJar
+            artifact groovydocJar
+            artifact javadocJar
+
+            pom.withXml {
+                def root = asNode()
+                root.appendNode('name', 'Gradle Docker plugin')
+                root.appendNode('description', 'Gradle plugin for managing Docker images and containers.')
+                root.appendNode('url', 'https://github.com/bmuschko/gradle-docker-plugin')
+                root.appendNode('inceptionYear', '2014')
+
+                def scm = root.appendNode('scm')
+                scm.appendNode('url', 'https://github.com/bmuschko/gradle-docker-plugin')
+                scm.appendNode('connection', 'scm:https://bmuschko@github.com/bmuschko/gradle-docker-plugin.git')
+                scm.appendNode('developerConnection', 'scm:git://github.com/bmuschko/gradle-docker-plugin.git')
+
+                def license = root.appendNode('licenses').appendNode('license')
+                license.appendNode('name', 'The Apache Software License, Version 2.0')
+                license.appendNode('url', 'http://www.apache.org/licenses/LICENSE-2.0.txt')
+                license.appendNode('distribution', 'repo')
+
+//                def developers = root.appendNode('developers')
+//                def developer = developers.appendNode('developer')
+//                developer.appendNode('name', gitConfig.getString('user', null, 'name'))
+//                developer.appendNode('email', gitConfig.getString('user', null, 'email'))
+            }
+        }
+    }
+}
+
+gradle.taskGraph.whenReady { taskGraph ->
+    if (taskGraph.hasTask(bintrayUpload)) {
+        bintray {
+            user = resolveProperty('BINTRAY_USER', 'bintray.user')
+            key = resolveProperty('BINTRAY_KEY', 'bintray.key')
+            publications = ['mavenJava']
+            publish = false
+//            publish = version.status == 'release'
+
+            pkg {
+                userOrg = 'twcable'
+                repo = 'aem'
+                name = project.name
+
+                desc = 'A number of plugins for making it easier to work with Gradle and Adobe CQ/AEM'
+
+                websiteUrl = 'https://github.com/TWCable/cq-gradle-plugin'
+                issueTrackerUrl = 'https://github.com/TWCable/cq-gradle-plugin/issues'
+                vcsUrl = 'https://github.com/TWCable/cq-gradle-plugin.git'
+                licenses = ['Apache-2.0']
+                labels = ['gradle', 'groovy', 'http']
+                attributes = ['plat': ['gradle', 'aem', 'cq']]
+
+                publicDownloadNumbers = true
+
+                version {
+                    vcsTag = "v$project.version"
+                    attributes = ['gradle-plugin': ["com.twcable.cq-gradle-plugin-create-package:${project.group}:${project.name}",
+                                                    "com.twcable.cq-gradle-plugin-bundle:${project.group}:${project.name}"]]
+
+//            gpg {
+//                sign = true
+//                passphrase = resolveProperty('GPG_PASSPHRASE', 'gpgPassphrase')
+//            }
+                }
+            }
+        }
+    }
+}
+
+String resolveProperty(String envVarKey, String projectPropKey) {
+    String propValue = System.getenv()[envVarKey]
+
+    if (propValue) {
+        return propValue
+    }
+
+    if (hasProperty(projectPropKey)) {
+        return getProperty(projectPropKey)
+    }
+    else {
+        throw new IllegalArgumentException((String)"Please define ${envVarKey} environment variable, " +
+            "or '${projectPropKey}' in the project. (Such as in ~/.gradle/gradle.properties)")
+    }
+}

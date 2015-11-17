@@ -1,0 +1,12 @@
+def httpcomponents_version = '4.1.2'
+
+//noinspection GroovyAssignabilityCheck
+dependencies {
+    compile gradleApi()
+
+    compile "org.apache.httpcomponents:httpclient:${httpcomponents_version}"
+    compile "org.apache.httpcomponents:httpmime:${httpcomponents_version}"
+
+    // @Nonnull @Nullable etc annotations
+    compile "com.google.code.findbugs:jsr305:2.0.0"
+}
