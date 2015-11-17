@@ -1,3 +1,12 @@
+# DEPRECATED #
+
+This project has been split apart and active development has moved to:
+
+* [TWCable/gradle-plugin-cq-package](../../../gradle-plugin-cq-package)
+* [TWCable/gradle-plugin-cq-bundle](../../../gradle-plugin-cq-bundle)
+* [TWCable/gradle-plugin-scr](../../../gradle-plugin-scr)
+* [TWCable/gradle-plugin-bundlor](../../../gradle-plugin-bundlor)
+
 # Purpose #
 
 This contains a number of plugins for making it easier to work with Gradle and Adobe CQ/AEM.
